@@ -29,6 +29,8 @@ protected:
 	virtual void BeginPlay() override;
 
 private:
+	constexpr FString GrenadeName = GetName();
+	
 	//Functionality
 	static constexpr bool BaseSticksToSurfaces = false;
 	static constexpr float BaseGrenadeFuseDuration = 2.0f;

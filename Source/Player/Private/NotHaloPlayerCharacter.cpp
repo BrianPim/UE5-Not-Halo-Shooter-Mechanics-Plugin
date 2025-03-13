@@ -168,6 +168,8 @@ void ANotHaloPlayerCharacter::SwitchWeapon()
 
 	PrimaryWeapon = SecondaryWeapon;
 	SecondaryWeapon = WeaponToSwitch;
+
+	UE_LOG(NotHaloPlayerLogging, Display, TEXT("Switched Weapon from %s to %s"), *SecondaryWeapon->GetWeaponName(), *PrimaryWeapon->GetWeaponName());
 	
 	OnWeaponChanged.Broadcast();
 }
@@ -191,13 +193,13 @@ void ANotHaloPlayerCharacter::ThrowGrenade()
 
 	if (ThrowGrenadeCooldownRemaining > 0.0f)
 	{
-		UE_LOG(NotHaloPlayer, Warning, TEXT("A Grenade cannot be thrown while it's on cooldown."));
+		UE_LOG(NotHaloPlayerLogging, Warning, TEXT("A Grenade cannot be thrown while it's on cooldown."));
 		return;
 	}
 
-	if (GrenadeMap[CurrentGrenade] <= 0)
+	if (GrenadeMap[CurrentGrenade] == 0)
 	{
-		UE_LOG(NotHaloPlayer, Display, TEXT("Player has no more grenades!"))
+		UE_LOG(NotHaloPlayerLogging, Warning, TEXT("Player has no more grenades!"))
 		return;
 	}
 
@@ -214,14 +216,13 @@ void ANotHaloPlayerCharacter::ThrowGrenade()
 																					SpawnRotation, PlayerWeaponSpawnParams);
 	AddGrenadeCount(CurrentGrenade, -1);
 
-	UE_LOG(NotHaloPlayer, Warning, TEXT("Grenades of Current Grenade Type Remaining: %d"), GrenadeMap[CurrentGrenade])
+	UE_LOG(NotHaloPlayerLogging, Display, TEXT("%s Remaining: %d"), *CurrentGrenade->GetClass()->GetName(), GrenadeMap[CurrentGrenade])
 
 	if (GrenadeMap[CurrentGrenade] == 0)
 	{
-		UE_LOG(NotHaloPlayer, Warning, TEXT("Player has run out of Grenades of the Current Type. Attempting to switch."))
+		UE_LOG(NotHaloPlayerLogging, Display, TEXT("Player has run out of %ss. Attempting to switch."), *CurrentGrenade->GetClass()->GetName())
 		SwitchGrenadeType();
 	}
-
 	
 	StartThrowGrenadeCooldown();
 }
@@ -232,7 +233,7 @@ void ANotHaloPlayerCharacter::SetCurrentGrenadeType(TSubclassOf<ANotHaloGrenade>
 	checkf(NewGrenadeType, TEXT("Provided Grenade Type is null! Unable to SET grenade type!"));
 	CurrentGrenade = NewGrenadeType;
 
-	UE_LOG(NotHaloPlayer, Display, TEXT("Player switched to Grenade Type: %s"), *CurrentGrenade->GetName())
+	UE_LOG(NotHaloPlayerLogging, Display, TEXT("Player switched to Grenade Type: %s"), *CurrentGrenade->GetName())
 
 	OnGrenadeTypeChanged.Broadcast();
 }
@@ -258,7 +259,7 @@ void ANotHaloPlayerCharacter::SwitchGrenadeType()
 
 	if (GrenadeArrayLength < 2)
 	{
-		UE_LOG(NotHaloPlayer, Warning, TEXT("Unable to switch Grenades! Check if there's at least two Grenade entries in the Player Character Blueprint!"))
+		UE_LOG(NotHaloPlayerLogging, Error, TEXT("Unable to switch Grenades! Check if there's at least two Grenade entries in the Player Character Blueprint!"))
 		return;
 	}
 	
@@ -282,7 +283,7 @@ void ANotHaloPlayerCharacter::SwitchGrenadeType()
 	
 	if (TotalGrenadeCount == 0)
 	{
-		UE_LOG(NotHaloPlayer, Display, TEXT("Unable to switch Grenades! Player has no grenades left!"))
+		UE_LOG(NotHaloPlayerLogging, Display, TEXT("Unable to switch Grenades! Player has no grenades left!"))
 		return;
 	}
 	
@@ -304,7 +305,7 @@ void ANotHaloPlayerCharacter::SwitchGrenadeType()
 		NextIndex++;
 	}
 
-	UE_LOG(NotHaloPlayer, Warning, TEXT("Unable to switch Grenades! Could not find valid Grenade type!"))
+	UE_LOG(NotHaloPlayerLogging, Error, TEXT("Unable to switch Grenades! Could not find valid Grenade type to switch to!"))
 }
 
 //Sets Count of provided Grenade Type

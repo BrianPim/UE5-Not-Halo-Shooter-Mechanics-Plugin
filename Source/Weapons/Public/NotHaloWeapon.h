@@ -34,6 +34,9 @@ public:
 	ANotHaloWeapon();
 	
 	virtual void Tick(float DeltaTime) override;
+
+	UFUNCTION(BlueprintPure, Category = "Weapon|Util")
+	FString GetWeaponName();
 	
 	//Weapon Functionality
 	UFUNCTION(BlueprintCallable, Category = "Weapon|Functionality")
@@ -102,6 +105,8 @@ protected:
 	virtual void BeginPlay() override;
 
 private:
+	const FString WeaponName = GetName();
+	
 	//Functionality
 	static constexpr float BaseUseWeaponCooldown = 0.5f;
 	static constexpr float BaseReloadDuration = 1.0f;

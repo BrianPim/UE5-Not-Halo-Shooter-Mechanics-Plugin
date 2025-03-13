@@ -17,4 +17,4 @@ void FPlayerModule::ShutdownModule()
     
 IMPLEMENT_MODULE(FPlayerModule, Player)
 
-DEFINE_LOG_CATEGORY(NotHaloPlayer);
+DEFINE_LOG_CATEGORY(NotHaloPlayerLogging);

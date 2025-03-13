@@ -20,4 +20,4 @@ void FNotHaloShooterMechanicsModule::ShutdownModule()
 	
 IMPLEMENT_MODULE(FNotHaloShooterMechanicsModule, NotHaloShooterMechanics)
 
-DEFINE_LOG_CATEGORY(NotHalo);
+DEFINE_LOG_CATEGORY(NotHaloLogging);

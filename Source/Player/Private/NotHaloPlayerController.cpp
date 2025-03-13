@@ -129,7 +129,7 @@ void ANotHaloPlayerController::HandleMove(const FInputActionValue& ActionValue)
 void ANotHaloPlayerController::HandleJump()
 {
 	//Debug Logging
-	UE_LOG(NotHaloPlayer, Display, TEXT("Jump"));
+	UE_LOG(NotHaloPlayerLogging, Display, TEXT("Jump"));
 	
 	//Make the Player's Character Pawn jump, disable crouch if active
 	if (PlayerCharacter)
@@ -142,7 +142,7 @@ void ANotHaloPlayerController::HandleJump()
 void ANotHaloPlayerController::HandleCrouch()
 {
 	//Debug Logging
-	UE_LOG(NotHaloPlayer, Display, TEXT("Crouch"));
+	UE_LOG(NotHaloPlayerLogging, Display, TEXT("Crouch"));
 	
 	if (PlayerCharacter)
 	{
@@ -165,9 +165,6 @@ void ANotHaloPlayerController::HandleUseWeapon()
 void ANotHaloPlayerController::HandleSwitchWeapon()
 {
 	PlayerCharacter->SwitchWeapon();
-	
-	//Debug Logging
-	UE_LOG(NotHaloPlayer, Display, TEXT("Switch Weapon"));
 }
 
 void ANotHaloPlayerController::HandleReloadWeapon()
@@ -188,17 +185,17 @@ void ANotHaloPlayerController::HandleSwitchGrenade()
 void ANotHaloPlayerController::HandleMelee()
 {
 	//Debug Logging
-	UE_LOG(NotHaloPlayer, Display, TEXT("Melee"));
+	UE_LOG(NotHaloPlayerLogging, Display, TEXT("Melee"));
 }
 
 void ANotHaloPlayerController::HandleScope()
 {
 	//Debug Logging
-	UE_LOG(NotHaloPlayer, Display, TEXT("Scope"));
+	UE_LOG(NotHaloPlayerLogging, Display, TEXT("Scope"));
 }
 
 void ANotHaloPlayerController::HandleInteract()
 {
 	//Debug Logging
-	UE_LOG(NotHaloPlayer, Display, TEXT("Interact"));
+	UE_LOG(NotHaloPlayerLogging, Display, TEXT("Interact"));
 }

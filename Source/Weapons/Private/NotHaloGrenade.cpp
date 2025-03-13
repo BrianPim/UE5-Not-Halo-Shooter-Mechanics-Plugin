@@ -16,7 +16,7 @@ void ANotHaloGrenade::BeginPlay()
 {
 	Super::BeginPlay();
 
-	UE_LOG(NotHaloWeapons, Display, TEXT("Grenade Initialized!"));
+	UE_LOG(NotHaloWeaponsLogging, Display, TEXT("%s Initialized!"), *GrenadeName);
 }
 
 // Called every frame
@@ -42,7 +42,7 @@ void ANotHaloGrenade::DetonateGrenade()
 {
 	OnGrenadeDetonation.Broadcast();
 
-	UE_LOG(NotHaloWeapons, Display, TEXT("Grenade Detonated!"));
+	UE_LOG(NotHaloWeaponsLogging, Display, TEXT("%s Detonated!"), *GrenadeName);
 	
 	Destroy();
 }

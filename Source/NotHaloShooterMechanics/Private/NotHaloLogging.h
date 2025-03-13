@@ -3,4 +3,4 @@
 #include "CoreMinimal.h"
 #include "Logging/StructuredLog.h"
 
-DECLARE_LOG_CATEGORY_EXTERN(NotHalo, Log, All);
+DECLARE_LOG_CATEGORY_EXTERN(NotHaloLogging, Log, All);

@@ -43,13 +43,18 @@ void ANotHaloWeapon::Tick(float DeltaTime)
 	}
 }
 
+FString ANotHaloWeapon::GetWeaponName()
+{
+	return *WeaponName;
+}
+
 //Functionality
 //Use Weapon
 void ANotHaloWeapon::UseWeapon()
 {
 	if (UseWeaponCooldownRemaining > 0.0f)
 	{
-		UE_LOG(NotHaloWeapons, Warning, TEXT("A Weapon cannot be used while it's on cooldown."));
+		UE_LOG(NotHaloWeaponsLogging, Warning, TEXT("%s cannot be used while it's on %f."), *WeaponName, UseWeaponCooldownRemaining);
 		return;
 	}
 
@@ -57,11 +62,11 @@ void ANotHaloWeapon::UseWeapon()
 	{
 		if (GetReserveAmmoCount() <= 0)
 		{
-			UE_LOG(NotHaloWeapons, Display, TEXT("Weapon is completely out of ammo!"));
+			UE_LOG(NotHaloWeaponsLogging, Display, TEXT("%s is completely out of ammo!"), *WeaponName);
 		}
 		else
 		{
-			UE_LOG(NotHaloWeapons, Display, TEXT("Weapon has no ammo in the magazine. Reloading."));
+			UE_LOG(NotHaloWeaponsLogging, Display, TEXT("%s has no ammo in the magazine. Reloading."), *WeaponName);
 
 			StartReloadWeapon();
 		}
@@ -71,7 +76,7 @@ void ANotHaloWeapon::UseWeapon()
 
 	//Further weapon functionality handled via Blueprint that references OnWeaponUsed delegate.
 	OnWeaponUsed.Broadcast();
-	UE_LOG(NotHaloWeapons, Display, TEXT("Weapon has been used! What happens next should be handled through a delegate in the Weapon's Blueprint."));
+	UE_LOG(NotHaloWeaponsLogging, Display, TEXT("%s has been used! What happens next should be handled through the OnWeaponUsed delegate in it's Blueprint Event Graph."), *WeaponName);
 
 	AddToMagazineAmmoCount(-AmmoConsumedOnUse);
 	StartCooldown();
@@ -82,17 +87,17 @@ void ANotHaloWeapon::StartReloadWeapon()
 {
 	if (Reloading)
 	{
-		UE_LOG(NotHaloWeapons, Warning, TEXT("Weapon is already in the middle of being reloaded."));
+		UE_LOG(NotHaloWeaponsLogging, Warning, TEXT("%s is already in the middle of being reloaded."), *WeaponName);
 		return;
 	}
 
 	if (CurrentMagazineAmmoCount >= MaxMagazineAmmoCount)
 	{
-		UE_LOG(NotHaloWeapons, Warning, TEXT("A Weapon cannot be reloaded if the magazine is full."));
+		UE_LOG(NotHaloWeaponsLogging, Warning, TEXT("%s cannot be reloaded while it's magazine is full."), *WeaponName);
 		return;
 	}
 
-	UE_LOG(NotHaloWeapons, Display, TEXT("Starting Weapon reload."));
+	UE_LOG(NotHaloWeaponsLogging, Display, TEXT("Starting Weapon Reload for %s."), *WeaponName);
 	
 	//TODO Play Reload Animation
 	
@@ -111,13 +116,13 @@ void ANotHaloWeapon::ReloadWeapon()
 {
 	if (CurrentReserveAmmoCount <= 0)
 	{
-		UE_LOG(NotHaloWeapons, Warning, TEXT("A Weapon cannot be reloaded if there's no Ammo in reserve."));
+		UE_LOG(NotHaloWeaponsLogging, Warning, TEXT("%s cannot be reloaded if there's no Ammo in reserve."), *WeaponName);
 		return;
 	}
 
 	if (CurrentMagazineAmmoCount >= MaxMagazineAmmoCount)
 	{
-		UE_LOG(NotHaloWeapons, Warning, TEXT("A Weapon cannot be reloaded if the magazine is full."));
+		UE_LOG(NotHaloWeaponsLogging, Warning, TEXT("%s cannot be reloaded if it's magazine is full."), *WeaponName);
 		return;
 	}
 
@@ -132,7 +137,7 @@ void ANotHaloWeapon::ReloadWeapon()
 	AddToMagazineAmmoCount(DeltaAmmo);
 	AddToReserveAmmoCount(-DeltaAmmo);
 	
-	UE_LOG(NotHaloWeapons, Display, TEXT("Weapon has been reloaded!"));
+	UE_LOG(NotHaloWeaponsLogging, Display, TEXT("%s has been reloaded!"), *WeaponName);
 }
 
 //Returns the Weapon's Cooldown duration

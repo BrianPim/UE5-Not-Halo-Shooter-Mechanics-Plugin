@@ -17,4 +17,4 @@ void FWeaponsModule::ShutdownModule()
     
 IMPLEMENT_MODULE(FWeaponsModule, Weapons)
 
-DEFINE_LOG_CATEGORY(NotHaloWeapons);
+DEFINE_LOG_CATEGORY(NotHaloWeaponsLogging);
