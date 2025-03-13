@@ -27,17 +27,17 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FWeaponIntStatUpdated,
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FWeaponFired);
 
 UCLASS(Abstract)
-class WEAPONS_API ANotHaloWeapon : public AActor
+class WEAPONS_API ANotHaloWeaponBase : public AActor
 {
 public:
 	// Sets default values for this actor's properties
-	ANotHaloWeapon();
+	ANotHaloWeaponBase();
 	
 	virtual void Tick(float DeltaTime) override;
 
-	UFUNCTION(BlueprintPure, Category = "Weapon|Util")
-	FString GetWeaponName();
-	
+	UPROPERTY(EditAnywhere)
+	TObjectPtr<UStaticMeshComponent> WeaponMesh;
+
 	//Weapon Functionality
 	UFUNCTION(BlueprintCallable, Category = "Weapon|Functionality")
 	void UseWeapon();
@@ -90,6 +90,10 @@ public:
 	
 	UFUNCTION(BlueprintCallable, Category = "Weapon|Ammo")
 	void AddToReserveAmmoCount(int DeltaAmmo);
+
+	//Util
+	UFUNCTION(BlueprintPure, Category = "Weapon|Util")
+	FString GetWeaponName();
 
 	//Delegates
 	UPROPERTY(BlueprintAssignable, Category = "Weapon|Functionality", meta = (ToolTip = "Hook up weapon functionality to this."))

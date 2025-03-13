@@ -2,25 +2,26 @@
 
 
 #include "NotHaloWeapon.h"
-
 #include "NotHaloWeaponsLogging.h"
 
 // Sets default values
-ANotHaloWeapon::ANotHaloWeapon()
+ANotHaloWeaponBase::ANotHaloWeaponBase()
 {
-	// Set this actor to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = true;
+	PrimaryActorTick.TickInterval = 0.1f; //We don't need tick to run every frame
+
+	WeaponMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("Weapon Mesh"));
+	RootComponent = WeaponMesh;
 }
 
 // Called when the game starts or when spawned
-void ANotHaloWeapon::BeginPlay()
+void ANotHaloWeaponBase::BeginPlay()
 {
 	Super::BeginPlay();
-	
 }
 
 // Called every frame
-void ANotHaloWeapon::Tick(float DeltaTime)
+void ANotHaloWeaponBase::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 
@@ -43,14 +44,9 @@ void ANotHaloWeapon::Tick(float DeltaTime)
 	}
 }
 
-FString ANotHaloWeapon::GetWeaponName()
-{
-	return *WeaponName;
-}
-
 //Functionality
 //Use Weapon
-void ANotHaloWeapon::UseWeapon()
+void ANotHaloWeaponBase::UseWeapon()
 {
 	if (UseWeaponCooldownRemaining > 0.0f)
 	{
@@ -83,7 +79,7 @@ void ANotHaloWeapon::UseWeapon()
 }
 
 //Starts the reload process
-void ANotHaloWeapon::StartReloadWeapon()
+void ANotHaloWeaponBase::StartReloadWeapon()
 {
 	if (Reloading)
 	{
@@ -106,13 +102,13 @@ void ANotHaloWeapon::StartReloadWeapon()
 }
 
 //Force Weapon to be reloaded without delay
-void ANotHaloWeapon::ForceReloadWeapon()
+void ANotHaloWeaponBase::ForceReloadWeapon()
 {
 	ReloadWeapon();
 }
 
 //Reload Weapon
-void ANotHaloWeapon::ReloadWeapon()
+void ANotHaloWeaponBase::ReloadWeapon()
 {
 	if (CurrentReserveAmmoCount <= 0)
 	{
@@ -141,63 +137,63 @@ void ANotHaloWeapon::ReloadWeapon()
 }
 
 //Returns the Weapon's Cooldown duration
-float ANotHaloWeapon::GetCooldownDuration()
+float ANotHaloWeaponBase::GetCooldownDuration()
 {
 	return UseWeaponCooldown;
 }
 
 //Returns the current duration remaining on the Weapon's Cooldown
-float ANotHaloWeapon::GetCooldownRemaining()
+float ANotHaloWeaponBase::GetCooldownRemaining()
 {
 	return UseWeaponCooldownRemaining;
 }
 
 //Sets a custom duration for Weapon Cooldowns
-void ANotHaloWeapon::SetCooldownDuration(float NewCooldown)
+void ANotHaloWeaponBase::SetCooldownDuration(float NewCooldown)
 {
 	UseWeaponCooldown = NewCooldown;
 	UseWeaponCooldown = FMath::Clamp(UseWeaponCooldown, 0, BIG_NUMBER);
 }
 
 //Start Weapon Cooldown, cannot be used if Active Cooldown > 0
-void ANotHaloWeapon::StartCooldown()
+void ANotHaloWeaponBase::StartCooldown()
 {
 	UseWeaponCooldownRemaining = UseWeaponCooldown;
 }
 
 //Force Weapon Cooldown to finish
-void ANotHaloWeapon::ForceFinishCooldown()
+void ANotHaloWeaponBase::ForceFinishCooldown()
 {
 	UseWeaponCooldownRemaining = 0;
 }
 
 //Returns Effective Range
-float ANotHaloWeapon::GetEffectiveRange()
+float ANotHaloWeaponBase::GetEffectiveRange()
 {
 	return EffectiveRange;
 }
 
 //Sets Effective Range
-void ANotHaloWeapon::SetEffectiveRange(float NewRange)
+void ANotHaloWeaponBase::SetEffectiveRange(float NewRange)
 {
 	EffectiveRange = NewRange;
 }
 
 //Ammo
 //Returns Current Magazine Ammo Count
-int ANotHaloWeapon::GetMagazineAmmoCount()
+int ANotHaloWeaponBase::GetMagazineAmmoCount()
 {
 	return CurrentMagazineAmmoCount;
 }
 
 //Returns Current Reserve Ammo Count
-int ANotHaloWeapon::GetReserveAmmoCount()
+int ANotHaloWeaponBase::GetReserveAmmoCount()
 {
 	return CurrentReserveAmmoCount;
 }
 
 //Sets Current Magazine Ammo Count
-void ANotHaloWeapon::SetMagazineAmmoCount(int NewAmmo)
+void ANotHaloWeaponBase::SetMagazineAmmoCount(int NewAmmo)
 {
 	int OldAmmo = CurrentMagazineAmmoCount;
 	
@@ -208,7 +204,7 @@ void ANotHaloWeapon::SetMagazineAmmoCount(int NewAmmo)
 }
 
 //Sets Current Reserve Ammo Count
-void ANotHaloWeapon::SetReserveAmmoCount(int NewAmmo)
+void ANotHaloWeaponBase::SetReserveAmmoCount(int NewAmmo)
 {
 	int OldAmmo = CurrentReserveAmmoCount;
 	
@@ -219,7 +215,7 @@ void ANotHaloWeapon::SetReserveAmmoCount(int NewAmmo)
 }
 
 //Adds delta to Current Magazine Ammo Count
-void ANotHaloWeapon::AddToMagazineAmmoCount(int DeltaAmmo)
+void ANotHaloWeaponBase::AddToMagazineAmmoCount(int DeltaAmmo)
 {
 	int OldAmmo = CurrentMagazineAmmoCount;
 	
@@ -230,7 +226,7 @@ void ANotHaloWeapon::AddToMagazineAmmoCount(int DeltaAmmo)
 }
 
 //Adds delta to Current Reserve Ammo Count
-void ANotHaloWeapon::AddToReserveAmmoCount(int DeltaAmmo)
+void ANotHaloWeaponBase::AddToReserveAmmoCount(int DeltaAmmo)
 {
 	int OldAmmo = CurrentReserveAmmoCount;
 	
@@ -239,4 +235,11 @@ void ANotHaloWeapon::AddToReserveAmmoCount(int DeltaAmmo)
 
 	OnMagazineAmmoCountChanged.Broadcast(OldAmmo, CurrentReserveAmmoCount, MaxReserveAmmoCount);
 }
+
+//Returns Name of Weapon as an FString
+FString ANotHaloWeaponBase::GetWeaponName()
+{
+	return *WeaponName;
+}
+
 
