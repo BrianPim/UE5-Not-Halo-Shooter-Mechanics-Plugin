@@ -19,6 +19,9 @@ public:
 	ANotHaloGrenade();
 	virtual void Tick(float DeltaTime) override;
 
+	UFUNCTION(BlueprintPure, Category = "Grenade|Util")
+	FString GetGrenadeName() const;
+
 	UFUNCTION(BlueprintCallable, Category = "Grenade|Functionality")
 	void DetonateGrenade();
 
@@ -29,7 +32,7 @@ protected:
 	virtual void BeginPlay() override;
 
 private:
-	constexpr FString GrenadeName = GetName();
+	const FString GrenadeName = GetName();
 	
 	//Functionality
 	static constexpr bool BaseSticksToSurfaces = false;

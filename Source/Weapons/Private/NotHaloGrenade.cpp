@@ -38,6 +38,11 @@ void ANotHaloGrenade::Tick(float DeltaTime)
 	}
 }
 
+FString ANotHaloGrenade::GetGrenadeName() const
+{
+	return GrenadeName;
+}
+
 void ANotHaloGrenade::DetonateGrenade()
 {
 	OnGrenadeDetonation.Broadcast();
