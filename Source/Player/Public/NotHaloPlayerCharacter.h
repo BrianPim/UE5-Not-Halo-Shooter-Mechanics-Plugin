@@ -8,7 +8,7 @@
 
 //Forward Declarations
 class UInputComponent;
-class ANotHaloWeapon;
+class ANotHaloWeaponBase;
 class ANotHaloGrenade;
 
 //Team assignment Enum, in case we want to have team-based game modes
@@ -92,10 +92,10 @@ public:
 
 	//Weapons
 	UFUNCTION(BlueprintPure, Category = "Player|Weapons")
-	ANotHaloWeapon* GetPrimaryWeapon();
+	ANotHaloWeaponBase* GetPrimaryWeapon();
 
 	UFUNCTION(BlueprintPure, Category = "Player|Weapons")
-	ANotHaloWeapon* GetSecondaryWeapon();
+	ANotHaloWeaponBase* GetSecondaryWeapon();
 
 	UFUNCTION(BlueprintCallable, Category = "Player|Weapons")
 	void UseWeapon();
@@ -107,7 +107,7 @@ public:
 	void SwitchWeapon();
 
 	UFUNCTION(BlueprintCallable, Category = "Player|Weapons")
-	void PickUpNewWeapon(ANotHaloWeapon* NewWeapon);
+	void PickUpNewWeapon(ANotHaloWeaponBase* NewWeapon);
 
 	//Grenades
 	UFUNCTION(BlueprintCallable, Category = "Player|Grenades")
@@ -193,12 +193,12 @@ private:
 
 	//Player's initial Primary Weapon
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Player|Weapons", meta = (AllowPrivateAccess = "true"))
-	TSubclassOf<ANotHaloWeapon> InitialPrimaryWeapon = nullptr;
-	TObjectPtr<ANotHaloWeapon> PrimaryWeapon = nullptr; //TODO Handle Initial Weapon via Game Mode
+	TSubclassOf<ANotHaloWeaponBase> InitialPrimaryWeapon = nullptr;
+	TObjectPtr<ANotHaloWeaponBase> PrimaryWeapon = nullptr; //TODO Handle Initial Weapon via Game Mode
 	//Player's initial Secondary Weapon
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Player|Weapons", meta = (AllowPrivateAccess = "true"))
-	TSubclassOf<ANotHaloWeapon> InitialSecondaryWeapon = nullptr; //TODO Handle Initial Weapon via Game Mode
-	TObjectPtr<ANotHaloWeapon> SecondaryWeapon = nullptr;
+	TSubclassOf<ANotHaloWeaponBase> InitialSecondaryWeapon = nullptr; //TODO Handle Initial Weapon via Game Mode
+	TObjectPtr<ANotHaloWeaponBase> SecondaryWeapon = nullptr;
 
 	//Grenades
 	TSubclassOf<ANotHaloGrenade> CurrentGrenade = nullptr;

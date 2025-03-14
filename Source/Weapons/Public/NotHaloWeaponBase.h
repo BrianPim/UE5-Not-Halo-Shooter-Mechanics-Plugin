@@ -4,7 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
-#include "NotHaloWeapon.generated.h"
+#include "NotHaloWeaponBase.generated.h"
 
 //Forward Declarations
 

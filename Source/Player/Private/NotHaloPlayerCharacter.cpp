@@ -5,7 +5,7 @@
 
 #include "NotHaloGrenade.h"
 #include "NotHaloPlayerLogging.h"
-#include "NotHaloWeapon.h"
+#include "NotHaloWeaponBase.h"
 
 // Sets default values
 ANotHaloPlayerCharacter::ANotHaloPlayerCharacter()
@@ -28,8 +28,8 @@ void ANotHaloPlayerCharacter::BeginPlay()
 	PlayerWeaponSpawnParams.Instigator = this;
 	PlayerWeaponSpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
 	
-	PrimaryWeapon = GetWorld()->SpawnActor<ANotHaloWeapon>(InitialPrimaryWeapon, SpawnLocation, SpawnRotation, PlayerWeaponSpawnParams);
-	SecondaryWeapon = GetWorld()->SpawnActor<ANotHaloWeapon>(InitialSecondaryWeapon, SpawnLocation, SpawnRotation, PlayerWeaponSpawnParams);
+	PrimaryWeapon = GetWorld()->SpawnActor<ANotHaloWeaponBase>(InitialPrimaryWeapon, SpawnLocation, SpawnRotation, PlayerWeaponSpawnParams);
+	SecondaryWeapon = GetWorld()->SpawnActor<ANotHaloWeaponBase>(InitialSecondaryWeapon, SpawnLocation, SpawnRotation, PlayerWeaponSpawnParams);
 
 	for(int i = 0; i < Grenades.Num(); i++)
 	{
@@ -136,13 +136,13 @@ void ANotHaloPlayerCharacter::UpdateShield(int DeltaShield)
 
 //Weapons
 //Returns Primary Weapon
-ANotHaloWeapon* ANotHaloPlayerCharacter::GetPrimaryWeapon()
+ANotHaloWeaponBase* ANotHaloPlayerCharacter::GetPrimaryWeapon()
 {
 	return PrimaryWeapon;
 }
 
 //Returns Secondary Weapon
-ANotHaloWeapon* ANotHaloPlayerCharacter::GetSecondaryWeapon()
+ANotHaloWeaponBase* ANotHaloPlayerCharacter::GetSecondaryWeapon()
 {
 	return SecondaryWeapon;
 }
@@ -164,7 +164,7 @@ void ANotHaloPlayerCharacter::SwitchWeapon()
 {
 	checkf(PrimaryWeapon, TEXT("Primary Weapon is null! Unable to SWITCH weapons!"));
 	checkf(SecondaryWeapon, TEXT("Secondary Weapon is null! Unable to SWITCH weapons!"));
-	TObjectPtr<ANotHaloWeapon> WeaponToSwitch = PrimaryWeapon;
+	TObjectPtr<ANotHaloWeaponBase> WeaponToSwitch = PrimaryWeapon;
 
 	PrimaryWeapon = SecondaryWeapon;
 	SecondaryWeapon = WeaponToSwitch;
@@ -175,9 +175,9 @@ void ANotHaloPlayerCharacter::SwitchWeapon()
 }
 
 //Drops Player's current Primary Weapon for a new Weapon
-void ANotHaloPlayerCharacter::PickUpNewWeapon(ANotHaloWeapon* NewWeapon)
+void ANotHaloPlayerCharacter::PickUpNewWeapon(ANotHaloWeaponBase* NewWeapon)
 {
-	TObjectPtr<ANotHaloWeapon> WeaponToDrop = PrimaryWeapon;
+	TObjectPtr<ANotHaloWeaponBase> WeaponToDrop = PrimaryWeapon;
 	PrimaryWeapon = NewWeapon;
 
 	//TODO Drop Weapon

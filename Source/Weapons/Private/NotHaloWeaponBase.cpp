@@ -1,7 +1,7 @@
 ﻿// Fill out your copyright notice in the Description page of Project Settings.
 
 
-#include "NotHaloWeapon.h"
+#include "NotHaloWeaponBase.h"
 #include "NotHaloWeaponsLogging.h"
 
 // Sets default values
