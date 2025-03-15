@@ -29,19 +29,6 @@ void ANotHaloWeaponBase::Tick(float DeltaTime)
 	{
 		UseWeaponCooldownRemaining -= DeltaTime;
 	}
-
-	if (Reloading)
-	{
-		if (ReloadDurationRemaining > 0.0f)
-		{
-			ReloadDurationRemaining -= DeltaTime;
-		}
-		else
-		{
-			Reloading = false;
-			ReloadWeapon();
-		}
-	}
 }
 
 //Functionality
@@ -50,7 +37,7 @@ void ANotHaloWeaponBase::UseWeapon()
 {
 	if (UseWeaponCooldownRemaining > 0.0f)
 	{
-		UE_LOG(NotHaloWeaponsLogging, Warning, TEXT("%s cannot be used while it's on %f."), *WeaponName, UseWeaponCooldownRemaining);
+		UE_LOG(NotHaloWeaponsLogging, Warning, TEXT("%s cannot be used while it's on cooldown! Remaining: %f."), *WeaponName, UseWeaponCooldownRemaining);
 		return;
 	}
 
@@ -87,29 +74,6 @@ void ANotHaloWeaponBase::StartReloadWeapon()
 		return;
 	}
 
-	if (CurrentMagazineAmmoCount >= MaxMagazineAmmoCount)
-	{
-		UE_LOG(NotHaloWeaponsLogging, Warning, TEXT("%s cannot be reloaded while it's magazine is full."), *WeaponName);
-		return;
-	}
-
-	UE_LOG(NotHaloWeaponsLogging, Display, TEXT("Starting Weapon Reload for %s."), *WeaponName);
-	
-	//TODO Play Reload Animation
-	
-	ReloadDurationRemaining = ReloadDuration;
-	Reloading = true;
-}
-
-//Force Weapon to be reloaded without delay
-void ANotHaloWeaponBase::ForceReloadWeapon()
-{
-	ReloadWeapon();
-}
-
-//Reload Weapon
-void ANotHaloWeaponBase::ReloadWeapon()
-{
 	if (CurrentReserveAmmoCount <= 0)
 	{
 		UE_LOG(NotHaloWeaponsLogging, Warning, TEXT("%s cannot be reloaded if there's no Ammo in reserve."), *WeaponName);
@@ -118,18 +82,36 @@ void ANotHaloWeaponBase::ReloadWeapon()
 
 	if (CurrentMagazineAmmoCount >= MaxMagazineAmmoCount)
 	{
-		UE_LOG(NotHaloWeaponsLogging, Warning, TEXT("%s cannot be reloaded if it's magazine is full."), *WeaponName);
+		UE_LOG(NotHaloWeaponsLogging, Warning, TEXT("%s cannot be reloaded while it's magazine is full."), *WeaponName);
 		return;
 	}
 
-	int OldMagazineAmmoCount = CurrentMagazineAmmoCount;
-	int DeltaAmmo = MaxMagazineAmmoCount - OldMagazineAmmoCount;
+	Reloading = true;
+
+	UE_LOG(NotHaloWeaponsLogging, Display, TEXT("Starting Weapon Reload for %s."), *WeaponName);
+	
+	OnReloadStarted.Broadcast();
+}
+
+//Reload Weapon
+void ANotHaloWeaponBase::FinishReloadWeapon()
+{
+	Reloading = false;
+	
+	UE_LOG(NotHaloWeaponsLogging, Display, TEXT("%s has been reloaded!"), *WeaponName);
+
+	OnReloadFinished.Broadcast();
+}
+
+void ANotHaloWeaponBase::ReloadWeapon()
+{
+	int DeltaAmmo = MaxMagazineAmmoCount - CurrentMagazineAmmoCount;
 
 	if (DeltaAmmo > CurrentReserveAmmoCount)
 	{
 		DeltaAmmo = CurrentReserveAmmoCount;
 	}
-		
+	
 	AddToMagazineAmmoCount(DeltaAmmo);
 	AddToReserveAmmoCount(-DeltaAmmo);
 	
@@ -200,6 +182,7 @@ void ANotHaloWeaponBase::SetMagazineAmmoCount(int NewAmmo)
 	CurrentMagazineAmmoCount = NewAmmo;
 	CurrentMagazineAmmoCount = FMath::Clamp(CurrentMagazineAmmoCount, 0, MaxMagazineAmmoCount);
 
+	UE_LOG(NotHaloWeaponsLogging, Display, TEXT("%s Current Magazine Ammo Count: %d"), *WeaponName, CurrentMagazineAmmoCount);
 	OnMagazineAmmoCountChanged.Broadcast(OldAmmo, CurrentMagazineAmmoCount, MaxMagazineAmmoCount);
 }
 
@@ -211,6 +194,7 @@ void ANotHaloWeaponBase::SetReserveAmmoCount(int NewAmmo)
 	CurrentReserveAmmoCount = NewAmmo;
 	CurrentReserveAmmoCount = FMath::Clamp(CurrentReserveAmmoCount, 0, MaxReserveAmmoCount);
 
+	UE_LOG(NotHaloWeaponsLogging, Display, TEXT("%s Current Reserve Ammo Count: %d"), *WeaponName, CurrentReserveAmmoCount);
 	OnReserveAmmoCountChanged.Broadcast(OldAmmo, CurrentReserveAmmoCount, MaxReserveAmmoCount);
 }
 
@@ -223,6 +207,30 @@ void ANotHaloWeaponBase::AddToMagazineAmmoCount(int DeltaAmmo)
 	CurrentMagazineAmmoCount = FMath::Clamp(CurrentMagazineAmmoCount, 0, MaxMagazineAmmoCount);
 
 	OnMagazineAmmoCountChanged.Broadcast(OldAmmo, CurrentMagazineAmmoCount, MaxMagazineAmmoCount);
+}
+
+
+void ANotHaloWeaponBase::IncrementalReload()
+{
+	int DeltaAmmo = AmmoAddedPerReloadAnimLoop;
+
+	if (DeltaAmmo <= 0)
+	{
+		DeltaAmmo = MaxMagazineAmmoCount - CurrentMagazineAmmoCount;
+	}
+
+	if (DeltaAmmo > CurrentReserveAmmoCount)
+	{
+		DeltaAmmo = CurrentReserveAmmoCount;
+	}
+	
+	AddToMagazineAmmoCount(DeltaAmmo);
+	AddToReserveAmmoCount(-DeltaAmmo);
+
+	if (CurrentMagazineAmmoCount >= MaxMagazineAmmoCount || CurrentReserveAmmoCount <= 0)
+	{
+		FinishReloadWeapon();
+	}
 }
 
 //Adds delta to Current Reserve Ammo Count
@@ -240,6 +248,16 @@ void ANotHaloWeaponBase::AddToReserveAmmoCount(int DeltaAmmo)
 FString ANotHaloWeaponBase::GetWeaponName()
 {
 	return *WeaponName;
+}
+
+APawn* ANotHaloWeaponBase::GetWeaponHolderPawn()
+{
+	return HolderPawn;
+}
+
+void ANotHaloWeaponBase::SetWeaponHolderPawn(APawn* NewHolder)
+{
+	HolderPawn = NewHolder;
 }
 
 

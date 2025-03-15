@@ -40,16 +40,22 @@ public:
 
 	//Weapon Functionality
 	UFUNCTION(BlueprintCallable, Category = "Weapon|Functionality")
-	void UseWeapon();
+	virtual void UseWeapon();
 
 	UFUNCTION(BlueprintCallable, Category = "Weapon|Functionality")
 	void StartReloadWeapon();
 
-	UFUNCTION(BlueprintCallable, Category = "Weapon|Functionality", meta = (ToolTip = "Forces immediate ammo reload."))
-	void ForceReloadWeapon();
-	
-	UFUNCTION() //Not included as a Blueprint callable to avoid confusion.
-	void ReloadWeapon();
+	//Intended to be hooked up to an AnimNotify
+	UFUNCTION(BlueprintCallable, Category = "Weapon|Functionality")
+	void IncrementalReload();
+
+	//Called by IncrementalReload when complete
+	UFUNCTION()
+	void FinishReloadWeapon();
+
+	//Not in use by default, but instantly handling reloading in a single function may be a desirable feature
+	UFUNCTION()
+	void ReloadWeapon(); 
 
 	UFUNCTION(BlueprintPure, Category = "Weapon|Functionality")
 	float GetCooldownDuration();
@@ -81,7 +87,7 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category = "Weapon|Ammo")
 	void SetMagazineAmmoCount(int NewAmmo);
-	
+
 	UFUNCTION(BlueprintCallable, Category = "Weapon|Ammo")
 	void SetReserveAmmoCount(int NewAmmo);
 	
@@ -95,9 +101,21 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Weapon|Util")
 	FString GetWeaponName();
 
+	UFUNCTION(BlueprintPure, Category = "Weapon|Util")
+	APawn* GetWeaponHolderPawn();
+
+	UFUNCTION(BlueprintCallable, Category = "Weapon|Util")
+	void SetWeaponHolderPawn(APawn* NewHolder);
+
 	//Delegates
 	UPROPERTY(BlueprintAssignable, Category = "Weapon|Functionality", meta = (ToolTip = "Hook up weapon functionality to this."))
 	FWeaponFired OnWeaponUsed;
+
+	UPROPERTY(BlueprintAssignable, Category = "Weapon|Functionality")
+	FWeaponFired OnReloadStarted;
+
+	UPROPERTY(BlueprintAssignable, Category = "Weapon|Functionality")
+	FWeaponFired OnReloadFinished;
 	
 	UPROPERTY(BlueprintAssignable, Category = "Weapon|Ammo")
 	FWeaponIntStatUpdated OnMagazineAmmoCountChanged;
@@ -107,42 +125,44 @@ public:
 	
 protected:
 	virtual void BeginPlay() override;
+	const FString WeaponName = GetName();
+	UPROPERTY()
+	TObjectPtr<APawn> HolderPawn = nullptr;
 
 private:
-	const FString WeaponName = GetName();
-	
 	//Functionality
 	static constexpr float BaseUseWeaponCooldown = 0.5f;
-	static constexpr float BaseReloadDuration = 1.0f;
 	static constexpr float BaseEffectiveRange = 30;
 	
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Weapon|Functionality", meta = (AllowPrivateAccess = "true"))
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Weapon|Functionality", meta = (AllowPrivateAccess = "true"))
 	float UseWeaponCooldown = BaseUseWeaponCooldown;
 	float UseWeaponCooldownRemaining = 0.0f;
 	
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Weapon|Functionality", meta = (AllowPrivateAccess = "true"))
-	float ReloadDuration = BaseReloadDuration;
-	float ReloadDurationRemaining = 0.0f;
-	bool Reloading = false;
-	
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Weapon|Functionality", meta = (AllowPrivateAccess = "true"))
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Weapon|Functionality", meta = (AllowPrivateAccess = "true"))
 	float EffectiveRange = BaseEffectiveRange;
 	
 	//Ammo
 	static constexpr int BaseMaxReserveAmmoCount = 15;
 	static constexpr int BaseMaxMagazineAmmoCount = 5;
 	static constexpr int BaseAmmoConsumedOnUse = 1;
+	static constexpr int BaseAmmoAddedPerReloadAnimLoop = 0;
 	
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Weapon|Ammo", meta = (AllowPrivateAccess = "true"))
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Weapon|Ammo", meta = (AllowPrivateAccess = "true"))
 	int MaxReserveAmmoCount = BaseMaxReserveAmmoCount;
 	int CurrentReserveAmmoCount = BaseMaxReserveAmmoCount;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Weapon|Ammo", meta = (AllowPrivateAccess = "true"))
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Weapon|Ammo", meta = (AllowPrivateAccess = "true"))
 	int MaxMagazineAmmoCount = BaseMaxMagazineAmmoCount;
 	int CurrentMagazineAmmoCount = BaseMaxMagazineAmmoCount;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Weapon|Ammo", meta = (AllowPrivateAccess = "true"))
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Weapon|Ammo", meta = (AllowPrivateAccess = "true"))
 	int AmmoConsumedOnUse = BaseAmmoConsumedOnUse;
+
+	//For weapons with a looping Reload animation (E.g. loading shotgun shells)
+	//Set to 0 if not applicable
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Weapon|Ammo", meta = (AllowPrivateAccess = "true"))
+	int AmmoAddedPerReloadAnimLoop = BaseAmmoAddedPerReloadAnimLoop;
+	bool Reloading = false;
 	
 	GENERATED_BODY()
 };

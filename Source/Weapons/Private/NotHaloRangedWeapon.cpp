@@ -3,6 +3,8 @@
 
 #include "NotHaloRangedWeapon.h"
 
+#include "NotHaloWeaponsLogging.h"
+
 
 // Sets default values
 ANotHaloRangedWeapon::ANotHaloRangedWeapon()
@@ -22,5 +24,27 @@ void ANotHaloRangedWeapon::BeginPlay()
 void ANotHaloRangedWeapon::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
+}
+
+void ANotHaloRangedWeapon::UseWeapon()
+{
+	Super::UseWeapon();
+	
+	const FVector SpawnLocation = FVector::ZeroVector;
+	const FRotator SpawnRotation = FRotator::ZeroRotator;
+
+	FActorSpawnParameters PlayerWeaponSpawnParams;
+	PlayerWeaponSpawnParams.Owner = HolderPawn;
+	PlayerWeaponSpawnParams.Instigator = HolderPawn;
+	PlayerWeaponSpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+	
+	if (ProjectileToSpawn)
+	{
+		GetWorld()->SpawnActor<ANotHaloProjectile>(ProjectileToSpawn, SpawnLocation, SpawnRotation, PlayerWeaponSpawnParams);
+	}
+	else
+	{
+		UE_LOG(NotHaloWeaponsLogging, Error, TEXT("%s has no Projectile assigned to it!"), *WeaponName)
+	}
 }
 

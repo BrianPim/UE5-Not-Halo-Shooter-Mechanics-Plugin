@@ -28,15 +28,41 @@ void ANotHaloPlayerCharacter::BeginPlay()
 	PlayerWeaponSpawnParams.Instigator = this;
 	PlayerWeaponSpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
 	
-	PrimaryWeapon = GetWorld()->SpawnActor<ANotHaloWeaponBase>(InitialPrimaryWeapon, SpawnLocation, SpawnRotation, PlayerWeaponSpawnParams);
-	SecondaryWeapon = GetWorld()->SpawnActor<ANotHaloWeaponBase>(InitialSecondaryWeapon, SpawnLocation, SpawnRotation, PlayerWeaponSpawnParams);
-
-	for(int i = 0; i < Grenades.Num(); i++)
+	if (InitialPrimaryWeapon)
 	{
-		GrenadeMap.Add(Grenades[i], MaxGrenadeCount); //TODO Handle Grenade Count via Game Mode
+		PrimaryWeapon = GetWorld()->SpawnActor<ANotHaloWeaponBase>(InitialPrimaryWeapon, SpawnLocation, SpawnRotation, PlayerWeaponSpawnParams);
+		PrimaryWeapon->SetWeaponHolderPawn(this);
+	}
+	else
+	{
+		UE_LOG(NotHaloPlayerLogging, Error, TEXT("No initial Primary Weapon assigned to the player! Is this intentional?"))
+	}
+
+	if (InitialSecondaryWeapon)
+	{
+		SecondaryWeapon = GetWorld()->SpawnActor<ANotHaloWeaponBase>(InitialSecondaryWeapon, SpawnLocation, SpawnRotation, PlayerWeaponSpawnParams);
+		SecondaryWeapon->SetWeaponHolderPawn(this);
+	}
+	else
+	{
+		UE_LOG(NotHaloPlayerLogging, Error, TEXT("No initial Secondary Weapon assigned to the player! Is this intentional?"))
 	}
 	
-	SetCurrentGrenadeType(Grenades[0]);
+	if (GrenadeTypes.Num() > 0)
+	{
+		for(int i = 0; i < GrenadeTypes.Num(); i++)
+		{
+			GrenadeMap.Add(GrenadeTypes[i], MaxGrenadeCount); //TODO Handle Grenade Count via Game Mode
+		}
+	
+		SetCurrentGrenadeType(GrenadeTypes[0]);
+	}
+	else
+	{
+		UE_LOG(NotHaloPlayerLogging, Error, TEXT("No Grenade Types assigned to the player! Is this intentional?"))
+	}
+
+	OnWeaponsInitialized.Broadcast();
 }
 
 // Called every frame
@@ -177,15 +203,21 @@ void ANotHaloPlayerCharacter::SwitchWeapon()
 //Drops Player's current Primary Weapon for a new Weapon
 void ANotHaloPlayerCharacter::PickUpNewWeapon(ANotHaloWeaponBase* NewWeapon)
 {
-	TObjectPtr<ANotHaloWeaponBase> WeaponToDrop = PrimaryWeapon;
+	if (PrimaryWeapon)
+	{
+		TObjectPtr<ANotHaloWeaponBase> WeaponToDrop = PrimaryWeapon;
+		WeaponToDrop->SetWeaponHolderPawn(nullptr);
+	}
+	
 	PrimaryWeapon = NewWeapon;
-
+	PrimaryWeapon->SetWeaponHolderPawn(this);
+	
 	//TODO Drop Weapon
 	
 	OnWeaponChanged.Broadcast();
 }
 
-//Grenades
+//GrenadeTypes
 //Throws Grenade
 void ANotHaloPlayerCharacter::ThrowGrenade()
 {
@@ -259,7 +291,7 @@ void ANotHaloPlayerCharacter::SwitchGrenadeType()
 
 	if (GrenadeArrayLength < 2)
 	{
-		UE_LOG(NotHaloPlayerLogging, Error, TEXT("Unable to switch Grenades! Check if there's at least two Grenade entries in the Player Character Blueprint!"))
+		UE_LOG(NotHaloPlayerLogging, Error, TEXT("Unable to switch GrenadeTypes! Check if there's at least two Grenade entries in the Player Character Blueprint!"))
 		return;
 	}
 	
@@ -269,7 +301,7 @@ void ANotHaloPlayerCharacter::SwitchGrenadeType()
 
 	//Initial loop to find the index of the Current Grenade
 	//Also checking total grenade count here
-	//Function will exit early if the Player Character has no Grenades
+	//Function will exit early if the Player Character has no GrenadeTypes
 	for (auto& Grenade : GrenadeMap)
 	{
 		if (Grenade.Key == CurrentGrenade)
@@ -283,7 +315,7 @@ void ANotHaloPlayerCharacter::SwitchGrenadeType()
 	
 	if (TotalGrenadeCount == 0)
 	{
-		UE_LOG(NotHaloPlayerLogging, Display, TEXT("Unable to switch Grenades! Player has no grenades left!"))
+		UE_LOG(NotHaloPlayerLogging, Display, TEXT("Unable to switch GrenadeTypes! Player has no grenades left!"))
 		return;
 	}
 	
@@ -296,16 +328,16 @@ void ANotHaloPlayerCharacter::SwitchGrenadeType()
 		}
 		
 		//If true, valid Grenade type To switch to has been found and the function can be ended early
-		if (GrenadeMap[Grenades[NextIndex]] > 0)
+		if (GrenadeMap[GrenadeTypes[NextIndex]] > 0)
 		{
-			SetCurrentGrenadeType(Grenades[NextIndex]);
+			SetCurrentGrenadeType(GrenadeTypes[NextIndex]);
 			return;
 		}
 
 		NextIndex++;
 	}
 
-	UE_LOG(NotHaloPlayerLogging, Error, TEXT("Unable to switch Grenades! Could not find valid Grenade type to switch to!"))
+	UE_LOG(NotHaloPlayerLogging, Error, TEXT("Unable to switch GrenadeTypes! Could not find valid Grenade type to switch to!"))
 }
 
 //Sets Count of provided Grenade Type

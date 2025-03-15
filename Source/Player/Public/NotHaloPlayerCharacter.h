@@ -143,6 +143,14 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Player|Grenades")
 	void StartThrowGrenadeCooldown();
 
+	//Max number of grenades that the Player can hold of a specific Type
+	UPROPERTY(EditAnywhere, Category = "Player|Grenades")
+	int MaxGrenadeCount = BaseMaxGrenadeCount;
+
+	//Max number of grenades that the Player can hold of a specific Type
+	UPROPERTY(EditAnywhere, Category = "Player|Grenades")
+	float ThrowGrenadeCooldown = BaseThrowGrenadeCooldown;
+
 	//Teams & Scoring
 	UFUNCTION(BlueprintCallable, Category = "Player|Teams & Scoring")
 	void SetTeam(EPlayerTeam NewTeam);
@@ -159,6 +167,9 @@ public:
 	
 	UPROPERTY(BlueprintAssignable, Category = "Player|Health & Shield")
 	FPlayerIsDead OnPlayerDied;
+
+	UPROPERTY(BlueprintAssignable, Category = "Player|Weapons")
+	FWeaponsUpdated OnWeaponsInitialized;
 
 	UPROPERTY(BlueprintAssignable, Category = "Player|Weapons")
 	FWeaponsUpdated OnWeaponChanged;
@@ -199,25 +210,18 @@ private:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Player|Weapons", meta = (AllowPrivateAccess = "true"))
 	TSubclassOf<ANotHaloWeaponBase> InitialSecondaryWeapon = nullptr; //TODO Handle Initial Weapon via Game Mode
 	TObjectPtr<ANotHaloWeaponBase> SecondaryWeapon = nullptr;
-
+	
 	//Grenades
 	TSubclassOf<ANotHaloGrenade> CurrentGrenade = nullptr;
 
 	//Grenade Types that the Player can use
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Player|Grenades", meta = (AllowPrivateAccess = "true"))
-	TArray<TSubclassOf<ANotHaloGrenade>> Grenades;
+	TArray<TSubclassOf<ANotHaloGrenade>> GrenadeTypes;
 	
 	static constexpr int BaseMaxGrenadeCount = 2;
 	static constexpr int BaseInitialGrenadeCount = 2;
 	static constexpr float BaseThrowGrenadeCooldown = 1;
-
-	//Max number of grenades that the Player can hold of a specific Type
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Player|Grenades", meta = (AllowPrivateAccess = "true"))
-	int MaxGrenadeCount = BaseMaxGrenadeCount;
-
-	//Max number of grenades that the Player can hold of a specific Type
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Player|Grenades", meta = (AllowPrivateAccess = "true"))
-	float ThrowGrenadeCooldown = BaseThrowGrenadeCooldown;
+	
 	float ThrowGrenadeCooldownRemaining = 0.0f;
 
 	TMap<TSubclassOf<ANotHaloGrenade>, int> GrenadeMap {};
