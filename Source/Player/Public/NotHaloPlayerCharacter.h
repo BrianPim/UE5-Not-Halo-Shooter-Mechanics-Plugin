@@ -61,6 +61,7 @@ public:
 	// Sets default values for this character's properties
 	ANotHaloPlayerCharacter();
 
+	//Movement
 	virtual void AddMovementInput(FVector WorldDirection, float ScaleValue = 1, bool bForce = false) override;
 	virtual void Jump() override;
 	virtual void Crouch(bool bClientSimulation = false) override;
@@ -91,6 +92,12 @@ public:
 	void UpdateShield(int DeltaShield);
 
 	//Weapons
+	
+	UPROPERTY(EditAnywhere, Category = "Player|Weapons")
+	FName PrimaryWeaponSocketName;
+	UPROPERTY(EditAnywhere, Category = "Player|Weapons")
+	FName SecondaryWeaponSocketName;
+	
 	UFUNCTION(BlueprintPure, Category = "Player|Weapons")
 	ANotHaloWeaponBase* GetPrimaryWeapon();
 
@@ -108,6 +115,12 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category = "Player|Weapons")
 	void PickUpNewWeapon(ANotHaloWeaponBase* NewWeapon);
+
+	UFUNCTION(BlueprintCallable, Category = "Player|Weapons")
+	void RefreshPrimaryWeaponSocket();
+
+	UFUNCTION(BlueprintCallable, Category = "Player|Weapons")
+	void RefreshSecondaryWeaponSocket();
 
 	//Grenades
 	UFUNCTION(BlueprintCallable, Category = "Player|Grenades")
@@ -210,6 +223,11 @@ private:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Player|Weapons", meta = (AllowPrivateAccess = "true"))
 	TSubclassOf<ANotHaloWeaponBase> InitialSecondaryWeapon = nullptr; //TODO Handle Initial Weapon via Game Mode
 	TObjectPtr<ANotHaloWeaponBase> SecondaryWeapon = nullptr;
+
+	UPROPERTY()
+	const USkeletalMeshSocket* PrimaryWeaponSocket = nullptr;
+	UPROPERTY()
+	const USkeletalMeshSocket* SecondaryWeaponSocket = nullptr;
 	
 	//Grenades
 	TSubclassOf<ANotHaloGrenade> CurrentGrenade = nullptr;

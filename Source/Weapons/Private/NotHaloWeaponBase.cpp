@@ -10,7 +10,7 @@ ANotHaloWeaponBase::ANotHaloWeaponBase()
 	PrimaryActorTick.bCanEverTick = true;
 	PrimaryActorTick.TickInterval = 0.1f; //We don't need tick to run every frame
 
-	WeaponMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("Weapon Mesh"));
+	WeaponMesh = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("Weapon Mesh"));
 	RootComponent = WeaponMesh;
 }
 
@@ -160,6 +160,15 @@ void ANotHaloWeaponBase::SetEffectiveRange(float NewRange)
 {
 	EffectiveRange = NewRange;
 }
+
+//Sets Weapon position, removes Holder and detaches from sockets
+void ANotHaloWeaponBase::DropWeapon(FVector Position)
+{
+	DetachFromActor(FDetachmentTransformRules::KeepWorldTransform);
+	SetWeaponHolderPawn(nullptr);
+	SetActorLocation(Position);
+}
+
 
 //Ammo
 //Returns Current Magazine Ammo Count

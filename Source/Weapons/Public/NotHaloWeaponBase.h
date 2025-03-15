@@ -36,7 +36,7 @@ public:
 	virtual void Tick(float DeltaTime) override;
 
 	UPROPERTY(EditAnywhere)
-	TObjectPtr<UStaticMeshComponent> WeaponMesh;
+	TObjectPtr<USkeletalMeshComponent> WeaponMesh;
 
 	//Weapon Functionality
 	UFUNCTION(BlueprintCallable, Category = "Weapon|Functionality")
@@ -77,6 +77,9 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category = "Weapon|Functionality")
 	void SetEffectiveRange(float NewRange);
+
+	UFUNCTION(BlueprintCallable, Category = "Weapon|Functionality")
+	void DropWeapon(FVector Position);
 
 	//Ammo
 	UFUNCTION(BlueprintPure, Category = "Weapon|Ammo")

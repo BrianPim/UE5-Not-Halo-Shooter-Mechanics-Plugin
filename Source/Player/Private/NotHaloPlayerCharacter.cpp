@@ -6,6 +6,7 @@
 #include "NotHaloGrenade.h"
 #include "NotHaloPlayerLogging.h"
 #include "NotHaloWeaponBase.h"
+#include "Engine/SkeletalMeshSocket.h"
 
 // Sets default values
 ANotHaloPlayerCharacter::ANotHaloPlayerCharacter()
@@ -19,10 +20,9 @@ void ANotHaloPlayerCharacter::BeginPlay()
 {
 	Super::BeginPlay();
 
-	//TODO Handle Weapon Positioning on Player
-	const FVector SpawnLocation = FVector::ZeroVector;
-	const FRotator SpawnRotation = FRotator::ZeroRotator;
-
+	PrimaryWeaponSocket = GetMesh()->GetSocketByName(PrimaryWeaponSocketName);
+	SecondaryWeaponSocket = GetMesh()->GetSocketByName(SecondaryWeaponSocketName);
+	
 	FActorSpawnParameters PlayerWeaponSpawnParams;
 	PlayerWeaponSpawnParams.Owner = this;
 	PlayerWeaponSpawnParams.Instigator = this;
@@ -30,8 +30,10 @@ void ANotHaloPlayerCharacter::BeginPlay()
 	
 	if (InitialPrimaryWeapon)
 	{
-		PrimaryWeapon = GetWorld()->SpawnActor<ANotHaloWeaponBase>(InitialPrimaryWeapon, SpawnLocation, SpawnRotation, PlayerWeaponSpawnParams);
+		PrimaryWeapon = GetWorld()->SpawnActor<ANotHaloWeaponBase>(InitialPrimaryWeapon, FVector::ZeroVector,
+															FRotator::ZeroRotator, PlayerWeaponSpawnParams);
 		PrimaryWeapon->SetWeaponHolderPawn(this);
+		RefreshPrimaryWeaponSocket();
 	}
 	else
 	{
@@ -40,8 +42,10 @@ void ANotHaloPlayerCharacter::BeginPlay()
 
 	if (InitialSecondaryWeapon)
 	{
-		SecondaryWeapon = GetWorld()->SpawnActor<ANotHaloWeaponBase>(InitialSecondaryWeapon, SpawnLocation, SpawnRotation, PlayerWeaponSpawnParams);
+		SecondaryWeapon = GetWorld()->SpawnActor<ANotHaloWeaponBase>(InitialSecondaryWeapon, FVector::ZeroVector,
+																FRotator::ZeroRotator, PlayerWeaponSpawnParams);
 		SecondaryWeapon->SetWeaponHolderPawn(this);
+		RefreshSecondaryWeaponSocket();
 	}
 	else
 	{
@@ -195,6 +199,9 @@ void ANotHaloPlayerCharacter::SwitchWeapon()
 	PrimaryWeapon = SecondaryWeapon;
 	SecondaryWeapon = WeaponToSwitch;
 
+	RefreshPrimaryWeaponSocket();
+	RefreshSecondaryWeaponSocket();
+
 	UE_LOG(NotHaloPlayerLogging, Display, TEXT("Switched Weapon from %s to %s"), *SecondaryWeapon->GetWeaponName(), *PrimaryWeapon->GetWeaponName());
 	
 	OnWeaponChanged.Broadcast();
@@ -211,11 +218,38 @@ void ANotHaloPlayerCharacter::PickUpNewWeapon(ANotHaloWeaponBase* NewWeapon)
 	
 	PrimaryWeapon = NewWeapon;
 	PrimaryWeapon->SetWeaponHolderPawn(this);
+
+	RefreshPrimaryWeaponSocket();
 	
 	//TODO Drop Weapon
 	
 	OnWeaponChanged.Broadcast();
 }
+
+void ANotHaloPlayerCharacter::RefreshPrimaryWeaponSocket()
+{
+	if (PrimaryWeaponSocket)
+	{
+		PrimaryWeaponSocket->AttachActor(PrimaryWeapon, GetMesh());
+	}
+	else
+	{
+		UE_LOG(NotHaloPlayerLogging, Error, TEXT("Unable to refresh Primary Weapon Socket!"))
+	}
+}
+
+void ANotHaloPlayerCharacter::RefreshSecondaryWeaponSocket()
+{
+	if (SecondaryWeaponSocket)
+	{
+		SecondaryWeaponSocket->AttachActor(SecondaryWeapon, GetMesh());
+	}
+	else
+	{
+		UE_LOG(NotHaloPlayerLogging, Error, TEXT("Unable to refresh Secondary Weapon Socket!"))
+	}
+}
+
 
 //GrenadeTypes
 //Throws Grenade
