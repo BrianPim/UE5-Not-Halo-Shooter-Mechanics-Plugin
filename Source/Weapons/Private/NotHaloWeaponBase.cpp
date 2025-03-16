@@ -25,6 +25,9 @@ void ANotHaloWeaponBase::BeginPlay()
 	{
 		UE_LOG(NotHaloWeaponsLogging, Error, TEXT("Left Hand Socket not found on %s!"), *WeaponName)
 	}
+
+	CurrentMagazineAmmoCount = MaxMagazineAmmoCount;
+	CurrentReserveAmmoCount = MaxReserveAmmoCount;
 }
 
 // Called every frame
@@ -258,11 +261,7 @@ void ANotHaloWeaponBase::AddToMagazineAmmoCount(int DeltaAmmo)
 	
 	CurrentMagazineAmmoCount += DeltaAmmo;
 	CurrentMagazineAmmoCount = FMath::Clamp(CurrentMagazineAmmoCount, 0, MaxMagazineAmmoCount);
-
-	if (DeltaAmmo > 0)
-	{
-		UE_LOG(NotHaloWeaponsLogging, Error, TEXT("test"))
-	}
+	
 	OnMagazineAmmoCountChanged.Broadcast(OldAmmo, CurrentMagazineAmmoCount, MaxMagazineAmmoCount);
 }
 
@@ -292,6 +291,8 @@ APawn* ANotHaloWeaponBase::GetWeaponHolderPawn()
 void ANotHaloWeaponBase::SetWeaponHolderPawn(APawn* NewHolder)
 {
 	HolderPawn = NewHolder;
+
+	UE_LOG(NotHaloWeaponsLogging, Error, TEXT("%s is now being held by %s"), *WeaponName, *HolderPawn->GetName());
 }
 
 

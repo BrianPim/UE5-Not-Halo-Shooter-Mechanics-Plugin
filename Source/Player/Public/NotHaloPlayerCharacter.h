@@ -10,6 +10,7 @@
 class UInputComponent;
 class ANotHaloWeaponBase;
 class ANotHaloGrenade;
+class UCameraComponent;
 
 //Team assignment Enum, in case we want to have team-based game modes
 UENUM(BlueprintType)

@@ -6,6 +6,7 @@
 #include "NotHaloPlayerLogging.h"
 #include "NotHaloWeaponBase.h"
 #include "Engine/SkeletalMeshSocket.h"
+#include "Camera/CameraComponent.h"
 
 // Sets default values
 ANotHaloPlayerCharacter::ANotHaloPlayerCharacter()
@@ -180,21 +181,43 @@ ANotHaloWeaponBase* ANotHaloPlayerCharacter::GetSecondaryWeapon()
 
 void ANotHaloPlayerCharacter::UseWeapon()
 {
-	checkf(PrimaryWeapon, TEXT("Primary Weapon is null! Unable to USE weapon!"));
-	PrimaryWeapon->UseWeapon();
+	if (PrimaryWeapon)
+	{
+		PrimaryWeapon->UseWeapon();
+	}
+	else
+	{
+		UE_LOG(NotHaloPlayerLogging, Error, TEXT("Primary Weapon is null! Unable to USE weapon!"));
+	}
 }
 
 void ANotHaloPlayerCharacter::ReloadWeapon()
 {
-	checkf(PrimaryWeapon, TEXT("Primary Weapon is null! Unable to RELOAD weapon!"));
-	PrimaryWeapon->StartReloadWeapon();
+	if (PrimaryWeapon)
+	{
+		PrimaryWeapon->StartReloadWeapon();
+	}
+	else
+	{
+		UE_LOG(NotHaloPlayerLogging, Error, TEXT("Primary Weapon is null! Unable to RELOAD weapon!"));
+	}
 }
 
 //Switches Player's Weapons; Primary becomes Secondary and Secondary becomes Primary
 void ANotHaloPlayerCharacter::SwitchWeapon()
 {
-	checkf(PrimaryWeapon, TEXT("Primary Weapon is null! Unable to SWITCH weapons!"));
-	checkf(SecondaryWeapon, TEXT("Secondary Weapon is null! Unable to SWITCH weapons!"));
+	if (!PrimaryWeapon)
+	{
+		UE_LOG(NotHaloPlayerLogging, Error, TEXT("Primary Weapon is null! Unable to SWITCH weapons!"));
+		return;
+	}
+
+	if (!SecondaryWeapon)
+	{
+		UE_LOG(NotHaloPlayerLogging, Error, TEXT("Secondary Weapon is null! Unable to SWITCH weapons!"));
+		return;
+	}
+	
 	TObjectPtr<ANotHaloWeaponBase> WeaponToSwitch = PrimaryWeapon;
 
 	PrimaryWeapon = SecondaryWeapon;
@@ -256,7 +279,11 @@ void ANotHaloPlayerCharacter::RefreshSecondaryWeaponSocket()
 //Throws Grenade
 void ANotHaloPlayerCharacter::ThrowGrenade()
 {
-	checkf(CurrentGrenade, TEXT("Current Grenade is null! Unable to THROW grenade!"));
+	if (!CurrentGrenade)
+	{
+		UE_LOG(NotHaloPlayerLogging, Error, TEXT("Current Grenade is null! Unable to THROW grenade!"));
+		return;
+	}
 
 	if (ThrowGrenadeCooldownRemaining > 0.0f)
 	{
@@ -297,7 +324,12 @@ void ANotHaloPlayerCharacter::ThrowGrenade()
 //Sets Current Grenade Type
 void ANotHaloPlayerCharacter::SetCurrentGrenadeType(TSubclassOf<ANotHaloGrenade> NewGrenadeType)
 {
-	checkf(NewGrenadeType, TEXT("Provided Grenade Type is null! Unable to SET grenade type!"));
+	if (!NewGrenadeType)
+	{
+		UE_LOG(NotHaloPlayerLogging, Error, TEXT("Provided Grenade Type is null! Unable to SET grenade type!"));
+		return;
+	}
+	
 	CurrentGrenade = NewGrenadeType;
 
 	UE_LOG(NotHaloPlayerLogging, Display, TEXT("Player switched to Grenade Type: %s"), *CurrentGrenade->GetName())
@@ -308,14 +340,24 @@ void ANotHaloPlayerCharacter::SetCurrentGrenadeType(TSubclassOf<ANotHaloGrenade>
 //Returns Current Grenade Type
 TSubclassOf<ANotHaloGrenade> ANotHaloPlayerCharacter::GetCurrentGrenadeType()
 {
-	checkf(CurrentGrenade, TEXT("Current Grenade is null! Unable to RETURN grenade type!"));
+	if (!CurrentGrenade)
+	{
+		UE_LOG(NotHaloPlayerLogging, Error, TEXT("Provided Grenade Type is null! Unable to RETURN grenade type!"));
+		return nullptr;
+	}
+	
 	return CurrentGrenade;
 }
 
 //Returns Current Grenade Count of provided Grenade Type
 int ANotHaloPlayerCharacter::GetGrenadeCount(TSubclassOf<ANotHaloGrenade> GrenadeType)
 {
-	checkf(GrenadeMap[GrenadeType], TEXT("Grenade type not found! Make sure to assign it inside of the Player Character Blueprint!"))
+	if (!GrenadeMap[GrenadeType])
+	{
+		UE_LOG(NotHaloPlayerLogging, Error, TEXT("Grenade type not found! Make sure to assign it inside of the Player Character Blueprint!"));
+		return 0;
+	}
+	
 	return GrenadeMap[GrenadeType];
 }
 
@@ -435,7 +477,6 @@ void ANotHaloPlayerCharacter::SetScore(int DeltaScore)
 
 	OnScoreChanged.Broadcast(OldScore, CurrentScore, CurrentScore == OldScore + DeltaScore);
 }
-
 
 
 
