@@ -20,11 +20,6 @@ void ANotHaloRangedWeapon::BeginPlay()
 	Super::BeginPlay();
 
 	ProjectileSpawnSocket = WeaponMesh->GetSocketByName(ProjectileSpawnSocketName);
-
-	if (!ProjectileSpawnSocket)
-	{
-		UE_LOG(NotHaloWeaponsLogging, Error, TEXT("Projectile Spawn Socket not found on %s!"), *WeaponName)
-	}
 }
 
 // Called every frame
@@ -39,6 +34,12 @@ void ANotHaloRangedWeapon::UseWeapon()
 		return;
 	
 	Super::UseWeapon();
+
+	if (!ProjectileSpawnSocket)
+	{
+		UE_LOG(NotHaloWeaponsLogging, Error, TEXT("Projectile Spawn Socket not found on %s!"), *WeaponName)
+		return;
+	}
 
 	FActorSpawnParameters PlayerWeaponSpawnParams;
 	PlayerWeaponSpawnParams.Owner = HolderPawn;
