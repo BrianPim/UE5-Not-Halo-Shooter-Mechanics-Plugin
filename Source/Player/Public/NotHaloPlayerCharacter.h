@@ -97,6 +97,9 @@ public:
 	FName PrimaryWeaponSocketName;
 	UPROPERTY(EditAnywhere, Category = "Player|Weapons")
 	FName SecondaryWeaponSocketName;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Player|Weapons")
+	FName RightHandBoneName;
 	
 	UFUNCTION(BlueprintPure, Category = "Player|Weapons")
 	ANotHaloWeaponBase* GetPrimaryWeapon();

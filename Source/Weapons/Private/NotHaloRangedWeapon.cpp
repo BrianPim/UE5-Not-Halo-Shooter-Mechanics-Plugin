@@ -4,6 +4,7 @@
 #include "NotHaloRangedWeapon.h"
 
 #include "NotHaloWeaponsLogging.h"
+#include "Engine/SkeletalMeshSocket.h"
 
 
 // Sets default values
@@ -17,7 +18,13 @@ ANotHaloRangedWeapon::ANotHaloRangedWeapon()
 void ANotHaloRangedWeapon::BeginPlay()
 {
 	Super::BeginPlay();
-	
+
+	ProjectileSpawnSocket = WeaponMesh->GetSocketByName(ProjectileSpawnSocketName);
+
+	if (!ProjectileSpawnSocket)
+	{
+		UE_LOG(NotHaloWeaponsLogging, Error, TEXT("Projectile Spawn Socket not found on %s!"), *WeaponName)
+	}
 }
 
 // Called every frame
@@ -28,10 +35,10 @@ void ANotHaloRangedWeapon::Tick(float DeltaTime)
 
 void ANotHaloRangedWeapon::UseWeapon()
 {
-	Super::UseWeapon();
+	if (!CanUseWeapon())
+		return;
 	
-	const FVector SpawnLocation = FVector::ZeroVector;
-	const FRotator SpawnRotation = FRotator::ZeroRotator;
+	Super::UseWeapon();
 
 	FActorSpawnParameters PlayerWeaponSpawnParams;
 	PlayerWeaponSpawnParams.Owner = HolderPawn;
@@ -40,7 +47,7 @@ void ANotHaloRangedWeapon::UseWeapon()
 	
 	if (ProjectileToSpawn)
 	{
-		GetWorld()->SpawnActor<ANotHaloProjectile>(ProjectileToSpawn, SpawnLocation, SpawnRotation, PlayerWeaponSpawnParams);
+		GetWorld()->SpawnActor<ANotHaloProjectile>(ProjectileToSpawn, ProjectileSpawnSocket->GetSocketTransform(WeaponMesh), PlayerWeaponSpawnParams);
 	}
 	else
 	{

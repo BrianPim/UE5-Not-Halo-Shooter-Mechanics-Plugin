@@ -25,10 +25,8 @@ public:
 	UPROPERTY(EditAnywhere)
 	TObjectPtr<UProjectileMovementComponent> ProjectileMovementComponent;
 
-	int GetHealthDamage();
-	void SetHealthDamage(int NewHealthDamage);
-	int GetShieldDamage();
-	void SetShieldDamage(int NewShieldDamage);
+	int GetDamage();
+	void SetDamage(int NewDamage);
 	FVector GetProjectileDirection();
 	FVector GetProjectileVelocity();
 
@@ -45,13 +43,10 @@ private:
 	float LifeDurationRemaining = BaseLifeDuration;
 	
 	//Damage
-	static constexpr int BaseHealthDamage = 10;
-	static constexpr int BaseShieldDamage = 10;
+	static constexpr int BaseDamage = 10;
 	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Projectile|Damage", meta = (AllowPrivateAccess = "true"))
-	int HealthDamage;
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Projectile|Damage", meta = (AllowPrivateAccess = "true"))
-	int ShieldDamage;
+	int Damage;
 
 	//Physics
 	static constexpr float BaseProjectileSpeed = 5000;

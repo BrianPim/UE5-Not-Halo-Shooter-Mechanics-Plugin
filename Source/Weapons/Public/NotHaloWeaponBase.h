@@ -35,12 +35,13 @@ public:
 	
 	virtual void Tick(float DeltaTime) override;
 
-	UPROPERTY(EditAnywhere)
-	TObjectPtr<USkeletalMeshComponent> WeaponMesh;
-
 	//Weapon Functionality
+	
 	UFUNCTION(BlueprintCallable, Category = "Weapon|Functionality")
 	virtual void UseWeapon();
+
+	UFUNCTION(BlueprintPure, Category = "Weapon|Functionality")
+	bool CanUseWeapon();
 
 	UFUNCTION(BlueprintCallable, Category = "Weapon|Functionality")
 	void StartReloadWeapon();
@@ -101,6 +102,7 @@ public:
 	void AddToReserveAmmoCount(int DeltaAmmo);
 
 	//Util
+	
 	UFUNCTION(BlueprintPure, Category = "Weapon|Util")
 	FString GetWeaponName();
 
@@ -109,6 +111,17 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category = "Weapon|Util")
 	void SetWeaponHolderPawn(APawn* NewHolder);
+
+	//Mesh
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Weapon|Mesh")
+	TObjectPtr<USkeletalMeshComponent> WeaponMesh;
+	
+	UPROPERTY(EditAnywhere, Category = "Weapon|Mesh")
+	FName LeftHandSocketName;
+	
+	UPROPERTY(BlueprintReadOnly, Category = "Weapon|Mesh")
+	const USkeletalMeshSocket* LeftHandSocket = nullptr;
 
 	//Delegates
 	UPROPERTY(BlueprintAssignable, Category = "Weapon|Functionality", meta = (ToolTip = "Hook up weapon functionality to this."))

@@ -18,6 +18,13 @@ ANotHaloWeaponBase::ANotHaloWeaponBase()
 void ANotHaloWeaponBase::BeginPlay()
 {
 	Super::BeginPlay();
+
+	LeftHandSocket = WeaponMesh->GetSocketByName(LeftHandSocketName);
+
+	if (!LeftHandSocket)
+	{
+		UE_LOG(NotHaloWeaponsLogging, Error, TEXT("Left Hand Socket not found on %s!"), *WeaponName)
+	}
 }
 
 // Called every frame
@@ -35,10 +42,27 @@ void ANotHaloWeaponBase::Tick(float DeltaTime)
 //Use Weapon
 void ANotHaloWeaponBase::UseWeapon()
 {
+	if (!CanUseWeapon())
+		return;
+	
+	//In case we interrupted reloading
+	Reloading = false;
+	
+	//Further weapon functionality handled via Blueprint that references OnWeaponUsed delegate.
+	OnWeaponUsed.Broadcast();
+	UE_LOG(NotHaloWeaponsLogging, Display, TEXT("%s has been used! What happens next should be handled through the OnWeaponUsed delegate in it's Blueprint Event Graph."), *WeaponName);
+
+	AddToMagazineAmmoCount(-AmmoConsumedOnUse);
+	StartCooldown();
+}
+
+//Checks if weapon can be used
+bool ANotHaloWeaponBase::CanUseWeapon()
+{
 	if (UseWeaponCooldownRemaining > 0.0f)
 	{
 		UE_LOG(NotHaloWeaponsLogging, Warning, TEXT("%s cannot be used while it's on cooldown! Remaining: %f."), *WeaponName, UseWeaponCooldownRemaining);
-		return;
+		return false;
 	}
 
 	if (GetMagazineAmmoCount() <= 0)
@@ -54,15 +78,10 @@ void ANotHaloWeaponBase::UseWeapon()
 			StartReloadWeapon();
 		}
 		
-		return;
+		return false;
 	}
 
-	//Further weapon functionality handled via Blueprint that references OnWeaponUsed delegate.
-	OnWeaponUsed.Broadcast();
-	UE_LOG(NotHaloWeaponsLogging, Display, TEXT("%s has been used! What happens next should be handled through the OnWeaponUsed delegate in it's Blueprint Event Graph."), *WeaponName);
-
-	AddToMagazineAmmoCount(-AmmoConsumedOnUse);
-	StartCooldown();
+	return true;
 }
 
 //Starts the reload process
@@ -103,6 +122,7 @@ void ANotHaloWeaponBase::FinishReloadWeapon()
 	OnReloadFinished.Broadcast();
 }
 
+//It may be useful to have a function that reloads the weapon without needing to go through animation stuff
 void ANotHaloWeaponBase::ReloadWeapon()
 {
 	int DeltaAmmo = MaxMagazineAmmoCount - CurrentMagazineAmmoCount;
@@ -116,6 +136,30 @@ void ANotHaloWeaponBase::ReloadWeapon()
 	AddToReserveAmmoCount(-DeltaAmmo);
 	
 	UE_LOG(NotHaloWeaponsLogging, Display, TEXT("%s has been reloaded!"), *WeaponName);
+}
+
+//Reloads by X amount each increment; Handled in the Animation Blueprint
+void ANotHaloWeaponBase::IncrementalReload()
+{
+	int DeltaAmmo = AmmoAddedPerReloadAnimLoop;
+
+	if (DeltaAmmo <= 0)
+	{
+		DeltaAmmo = MaxMagazineAmmoCount - CurrentMagazineAmmoCount;
+	}
+
+	if (DeltaAmmo > CurrentReserveAmmoCount)
+	{
+		DeltaAmmo = CurrentReserveAmmoCount;
+	}
+	
+	AddToMagazineAmmoCount(DeltaAmmo);
+	AddToReserveAmmoCount(-DeltaAmmo);
+
+	if (CurrentMagazineAmmoCount >= MaxMagazineAmmoCount || CurrentReserveAmmoCount <= 0)
+	{
+		FinishReloadWeapon();
+	}
 }
 
 //Returns the Weapon's Cooldown duration
@@ -215,31 +259,11 @@ void ANotHaloWeaponBase::AddToMagazineAmmoCount(int DeltaAmmo)
 	CurrentMagazineAmmoCount += DeltaAmmo;
 	CurrentMagazineAmmoCount = FMath::Clamp(CurrentMagazineAmmoCount, 0, MaxMagazineAmmoCount);
 
+	if (DeltaAmmo > 0)
+	{
+		UE_LOG(NotHaloWeaponsLogging, Error, TEXT("test"))
+	}
 	OnMagazineAmmoCountChanged.Broadcast(OldAmmo, CurrentMagazineAmmoCount, MaxMagazineAmmoCount);
-}
-
-
-void ANotHaloWeaponBase::IncrementalReload()
-{
-	int DeltaAmmo = AmmoAddedPerReloadAnimLoop;
-
-	if (DeltaAmmo <= 0)
-	{
-		DeltaAmmo = MaxMagazineAmmoCount - CurrentMagazineAmmoCount;
-	}
-
-	if (DeltaAmmo > CurrentReserveAmmoCount)
-	{
-		DeltaAmmo = CurrentReserveAmmoCount;
-	}
-	
-	AddToMagazineAmmoCount(DeltaAmmo);
-	AddToReserveAmmoCount(-DeltaAmmo);
-
-	if (CurrentMagazineAmmoCount >= MaxMagazineAmmoCount || CurrentReserveAmmoCount <= 0)
-	{
-		FinishReloadWeapon();
-	}
 }
 
 //Adds delta to Current Reserve Ammo Count
@@ -253,6 +277,7 @@ void ANotHaloWeaponBase::AddToReserveAmmoCount(int DeltaAmmo)
 	OnMagazineAmmoCountChanged.Broadcast(OldAmmo, CurrentReserveAmmoCount, MaxReserveAmmoCount);
 }
 
+//Util
 //Returns Name of Weapon as an FString
 FString ANotHaloWeaponBase::GetWeaponName()
 {
@@ -268,5 +293,6 @@ void ANotHaloWeaponBase::SetWeaponHolderPawn(APawn* NewHolder)
 {
 	HolderPawn = NewHolder;
 }
+
 
 

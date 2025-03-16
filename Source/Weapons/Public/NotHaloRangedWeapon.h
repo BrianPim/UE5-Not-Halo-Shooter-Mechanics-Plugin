@@ -7,7 +7,7 @@
 #include "NotHaloWeaponBase.h"
 #include "NotHaloRangedWeapon.generated.h"
 
-UCLASS()
+UCLASS(Abstract)
 class WEAPONS_API ANotHaloRangedWeapon : public ANotHaloWeaponBase
 {
 public:
@@ -17,6 +17,14 @@ public:
 	virtual void Tick(float DeltaTime) override;
 
 	virtual void UseWeapon() override;
+
+	//Mesh
+
+	UPROPERTY(EditAnywhere, Category = "Weapon|Ranged Weapon")
+	FName ProjectileSpawnSocketName;
+	
+	UPROPERTY(BlueprintReadOnly, Category = "Weapon|Ranged Weapon")
+	const USkeletalMeshSocket* ProjectileSpawnSocket = nullptr;
 
 protected:
 	// Called when the game starts or when spawned

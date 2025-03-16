@@ -2,7 +2,6 @@
 
 
 #include "NotHaloPlayerCharacter.h"
-
 #include "NotHaloGrenade.h"
 #include "NotHaloPlayerLogging.h"
 #include "NotHaloWeaponBase.h"
@@ -133,6 +132,8 @@ void ANotHaloPlayerCharacter::UpdateHealth(int DeltaHealth)
 	if (CurrentHealth <= 0.f)
 	{
 		//Player is dead!
+		UE_LOG(NotHaloPlayerLogging, Display, TEXT("%s has Died!"), *GetName())
+		
 		OnPlayerDied.Broadcast();
 	}
 }

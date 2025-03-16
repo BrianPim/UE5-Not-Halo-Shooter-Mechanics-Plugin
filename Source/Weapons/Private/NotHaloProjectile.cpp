@@ -33,28 +33,16 @@ void ANotHaloProjectile::Tick(float DeltaTime)
 }
 
 //Damage
-//Returns Damage done to Health
-int ANotHaloProjectile::GetHealthDamage()
+//Returns Damage
+int ANotHaloProjectile::GetDamage()
 {
-	return HealthDamage;
+	return Damage;
 }
 
-//Sets Health Damage
-void ANotHaloProjectile::SetHealthDamage(int NewHealthDamage)
+//Sets Damage
+void ANotHaloProjectile::SetDamage(int NewDamage)
 {
-	HealthDamage = NewHealthDamage;
-}
-
-//Returns Damage done to Shield
-int ANotHaloProjectile::GetShieldDamage()
-{
-	return ShieldDamage;
-}
-
-//Sets Shield Damage
-void ANotHaloProjectile::SetShieldDamage(int NewShieldDamage)
-{
-	ShieldDamage = NewShieldDamage;
+	Damage = NewDamage;
 }
 
 //Physics
