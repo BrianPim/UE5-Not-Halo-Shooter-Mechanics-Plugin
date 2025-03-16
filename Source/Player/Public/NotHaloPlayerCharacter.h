@@ -72,6 +72,10 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Player|Movement", meta = (AllowPrivateAccess = "true"))
 	float WalkSpeed = 400.0f;
 
+	//Take Damage
+	UFUNCTION(BlueprintCallable, Category = "Player|Health & Shield")
+	void TakeDamage(int Damage);
+
 	//Health
 	UFUNCTION(BlueprintPure, Category = "Player|Health & Shield")
 	int GetHealth();

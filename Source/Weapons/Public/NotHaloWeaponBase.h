@@ -147,12 +147,33 @@ protected:
 
 private:
 	//Functionality
-	static constexpr float BaseUseWeaponCooldown = 0.5f;
-	static constexpr float BaseEffectiveRange = 30;
-	
+	static constexpr float BaseUseWeaponCooldown = 0.25f;
+	static constexpr float BaseEffectiveRange = 30.0f;
+	static constexpr float BaseTimeToReload = 1.0f;
+
+	static constexpr bool BaseAllowReloadCancel = false;
+	static constexpr bool BaseHandleReloadWithDuration = true;
+
+	//Time until the player is allowed to use the weapon again
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Weapon|Functionality", meta = (AllowPrivateAccess = "true"))
 	float UseWeaponCooldown = BaseUseWeaponCooldown;
+	
+	UPROPERTY(BlueprintReadOnly, Category = "Weapon|Functionality", meta = (AllowPrivateAccess = "true"))
 	float UseWeaponCooldownRemaining = 0.0f;
+
+	//Allows for reload to be cancelled with other actions, E.g. using weapon
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Weapon|Functionality", meta = (AllowPrivateAccess = "true"))
+	bool AllowReloadCancel = BaseAllowReloadCancel;
+
+	//Set to false if reload is being handled elsewhere, E.g. through an animation montage notify
+	UPROPERTY(EditAnywhere, Category = "Weapon|Functionality")
+	bool HandleReloadWithDuration = BaseHandleReloadWithDuration;
+	
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Weapon|Functionality", meta = (AllowPrivateAccess = "HandleReloadWithDuration == true", EditCondition = "HandleReloadWithDuration == true"))
+	float TimeToReload = BaseTimeToReload;
+	
+	UPROPERTY(BlueprintReadOnly, Category = "Weapon|Functionality", meta = (AllowPrivateAccess = "HandleReloadWithDuration == true", EditCondition = "HandleReloadWithDuration == true"))
+	float ReloadDurationRemaining = 0.0f;
 	
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Weapon|Functionality", meta = (AllowPrivateAccess = "true"))
 	float EffectiveRange = BaseEffectiveRange;

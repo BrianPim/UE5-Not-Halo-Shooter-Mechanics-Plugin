@@ -1,6 +1,5 @@
 ﻿// Fill out your copyright notice in the Description page of Project Settings.
 
-
 #include "NotHaloWeaponBase.h"
 #include "NotHaloWeaponsLogging.h"
 
@@ -30,11 +29,23 @@ void ANotHaloWeaponBase::BeginPlay()
 	CurrentReserveAmmoCount = MaxReserveAmmoCount;
 }
 
-// Called every frame
+// Called every 0.1 seconds
 void ANotHaloWeaponBase::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 
+	if (Reloading && HandleReloadWithDuration)
+	{
+		if (ReloadDurationRemaining > 0.0f)
+		{
+			ReloadDurationRemaining -= DeltaTime;
+		}
+		else
+		{
+			FinishReloadWeapon();
+		}
+	}
+	
 	if (UseWeaponCooldownRemaining > 0.0f)
 	{
 		UseWeaponCooldownRemaining -= DeltaTime;
@@ -42,6 +53,7 @@ void ANotHaloWeaponBase::Tick(float DeltaTime)
 }
 
 //Functionality
+#pragma region Use Weapon
 //Use Weapon
 void ANotHaloWeaponBase::UseWeapon()
 {
@@ -84,9 +96,16 @@ bool ANotHaloWeaponBase::CanUseWeapon()
 		return false;
 	}
 
+	if (Reloading && !AllowReloadCancel)
+	{
+		return false;
+	}
+
 	return true;
 }
+#pragma endregion
 
+#pragma region Reload Weapon
 //Starts the reload process
 void ANotHaloWeaponBase::StartReloadWeapon()
 {
@@ -106,6 +125,11 @@ void ANotHaloWeaponBase::StartReloadWeapon()
 	{
 		UE_LOG(NotHaloWeaponsLogging, Warning, TEXT("%s cannot be reloaded while it's magazine is full."), *WeaponName);
 		return;
+	}
+
+	if (HandleReloadWithDuration)
+	{
+		ReloadDurationRemaining = TimeToReload;
 	}
 
 	Reloading = true;
@@ -164,7 +188,9 @@ void ANotHaloWeaponBase::IncrementalReload()
 		FinishReloadWeapon();
 	}
 }
+#pragma endregion
 
+#pragma region Weapon Cooldown
 //Returns the Weapon's Cooldown duration
 float ANotHaloWeaponBase::GetCooldownDuration()
 {
@@ -195,7 +221,9 @@ void ANotHaloWeaponBase::ForceFinishCooldown()
 {
 	UseWeaponCooldownRemaining = 0;
 }
+#pragma endregion
 
+#pragma region Other Functionality
 //Returns Effective Range
 float ANotHaloWeaponBase::GetEffectiveRange()
 {
@@ -215,19 +243,14 @@ void ANotHaloWeaponBase::DropWeapon(FVector Position)
 	SetWeaponHolderPawn(nullptr);
 	SetActorLocation(Position);
 }
-
+#pragma endregion
 
 //Ammo
+#pragma region Magazine Ammo
 //Returns Current Magazine Ammo Count
 int ANotHaloWeaponBase::GetMagazineAmmoCount()
 {
 	return CurrentMagazineAmmoCount;
-}
-
-//Returns Current Reserve Ammo Count
-int ANotHaloWeaponBase::GetReserveAmmoCount()
-{
-	return CurrentReserveAmmoCount;
 }
 
 //Sets Current Magazine Ammo Count
@@ -242,6 +265,25 @@ void ANotHaloWeaponBase::SetMagazineAmmoCount(int NewAmmo)
 	OnMagazineAmmoCountChanged.Broadcast(OldAmmo, CurrentMagazineAmmoCount, MaxMagazineAmmoCount);
 }
 
+//Adds delta to Current Magazine Ammo Count
+void ANotHaloWeaponBase::AddToMagazineAmmoCount(int DeltaAmmo)
+{
+	int OldAmmo = CurrentMagazineAmmoCount;
+	
+	CurrentMagazineAmmoCount += DeltaAmmo;
+	CurrentMagazineAmmoCount = FMath::Clamp(CurrentMagazineAmmoCount, 0, MaxMagazineAmmoCount);
+	
+	OnMagazineAmmoCountChanged.Broadcast(OldAmmo, CurrentMagazineAmmoCount, MaxMagazineAmmoCount);
+}
+#pragma endregion 
+
+#pragma region Reserve Ammo
+//Returns Current Reserve Ammo Count
+int ANotHaloWeaponBase::GetReserveAmmoCount()
+{
+	return CurrentReserveAmmoCount;
+}
+
 //Sets Current Reserve Ammo Count
 void ANotHaloWeaponBase::SetReserveAmmoCount(int NewAmmo)
 {
@@ -254,17 +296,6 @@ void ANotHaloWeaponBase::SetReserveAmmoCount(int NewAmmo)
 	OnReserveAmmoCountChanged.Broadcast(OldAmmo, CurrentReserveAmmoCount, MaxReserveAmmoCount);
 }
 
-//Adds delta to Current Magazine Ammo Count
-void ANotHaloWeaponBase::AddToMagazineAmmoCount(int DeltaAmmo)
-{
-	int OldAmmo = CurrentMagazineAmmoCount;
-	
-	CurrentMagazineAmmoCount += DeltaAmmo;
-	CurrentMagazineAmmoCount = FMath::Clamp(CurrentMagazineAmmoCount, 0, MaxMagazineAmmoCount);
-	
-	OnMagazineAmmoCountChanged.Broadcast(OldAmmo, CurrentMagazineAmmoCount, MaxMagazineAmmoCount);
-}
-
 //Adds delta to Current Reserve Ammo Count
 void ANotHaloWeaponBase::AddToReserveAmmoCount(int DeltaAmmo)
 {
@@ -275,6 +306,7 @@ void ANotHaloWeaponBase::AddToReserveAmmoCount(int DeltaAmmo)
 
 	OnMagazineAmmoCountChanged.Broadcast(OldAmmo, CurrentReserveAmmoCount, MaxReserveAmmoCount);
 }
+#pragma endregion
 
 //Util
 //Returns Name of Weapon as an FString
@@ -292,7 +324,7 @@ void ANotHaloWeaponBase::SetWeaponHolderPawn(APawn* NewHolder)
 {
 	HolderPawn = NewHolder;
 
-	UE_LOG(NotHaloWeaponsLogging, Error, TEXT("%s is now being held by %s"), *WeaponName, *HolderPawn->GetName());
+	UE_LOG(NotHaloWeaponsLogging, Display, TEXT("%s is now being held by %s"), *WeaponName, *HolderPawn->GetName());
 }
 
 

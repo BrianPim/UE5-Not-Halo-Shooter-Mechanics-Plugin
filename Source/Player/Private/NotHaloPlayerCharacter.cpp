@@ -101,6 +101,32 @@ void ANotHaloPlayerCharacter::Crouch(bool bClientSimulation)
 	Super::Crouch(bClientSimulation);
 }
 
+//Damages the Player. Death is handled in UpdateHealth()
+void ANotHaloPlayerCharacter::TakeDamage(int Damage)
+{
+	if (CurrentHealth <= 0)
+	{
+		UE_LOG(NotHaloPlayerLogging, Warning, TEXT("%s is already dead!"), *GetName())
+		return;
+	}
+	
+	if (CurrentShield > 0)
+	{
+		int OldShield = CurrentShield;
+		UpdateShield(-Damage);
+
+		int OverflowDamage = OldShield - Damage;
+
+		if (OverflowDamage < 0)
+		{
+			int OldHealth = CurrentHealth;
+			UpdateHealth(OverflowDamage);
+		}
+	}
+
+	UE_LOG(NotHaloPlayerLogging, Display, TEXT("%s took %d Damage!"), *GetName(), Damage)
+}
+
 //Health
 //Returns Current Health
 int ANotHaloPlayerCharacter::GetHealth()
@@ -117,20 +143,23 @@ int ANotHaloPlayerCharacter::GetMaxHealth()
 //Update Player's Current Health Value
 void ANotHaloPlayerCharacter::UpdateHealth(int DeltaHealth)
 {
-	//DEAD IS DEAD
-	if (CurrentHealth <= 0.f) return;
+	if (CurrentHealth <= 0)
+	{
+		UE_LOG(NotHaloPlayerLogging, Warning, TEXT("%s is already dead!"), *GetName())
+		return;
+	}
 
 	int OldValue = CurrentHealth;
 	
 	CurrentHealth += DeltaHealth;
-	CurrentHealth = FMath::Clamp(CurrentHealth, -1.f, MaxHealth);
+	CurrentHealth = FMath::Clamp(CurrentHealth, -1, MaxHealth);
 
 	if (CurrentHealth != OldValue)
 	{
 		OnHealthChanged.Broadcast(OldValue, CurrentHealth, MaxHealth);
 	}
 
-	if (CurrentHealth <= 0.f)
+	if (CurrentHealth <= 0)
 	{
 		//Player is dead!
 		UE_LOG(NotHaloPlayerLogging, Display, TEXT("%s has Died!"), *GetName())
@@ -158,7 +187,7 @@ void ANotHaloPlayerCharacter::UpdateShield(int DeltaShield)
 	int OldValue = CurrentShield;
 	
 	CurrentShield += DeltaShield;
-	CurrentShield = FMath::Clamp(CurrentShield, -1.f, MaxShield);
+	CurrentShield = FMath::Clamp(CurrentShield, -1, MaxShield);
 
 	if (CurrentShield != OldValue)
 	{
