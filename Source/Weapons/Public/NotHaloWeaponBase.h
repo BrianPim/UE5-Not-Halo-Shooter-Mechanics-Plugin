@@ -6,8 +6,6 @@
 #include "GameFramework/Actor.h"
 #include "NotHaloWeaponBase.generated.h"
 
-//Forward Declarations
-
 UENUM(BlueprintType)
 enum class EScopeType: uint8
 {
@@ -116,12 +114,6 @@ public:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Weapon|Mesh")
 	TObjectPtr<USkeletalMeshComponent> WeaponMesh;
-	
-	UPROPERTY(EditAnywhere, Category = "Weapon|Mesh")
-	FName LeftHandSocketName;
-	
-	UPROPERTY(BlueprintReadOnly, Category = "Weapon|Mesh")
-	const USkeletalMeshSocket* LeftHandSocket = nullptr;
 
 	//Delegates
 	UPROPERTY(BlueprintAssignable, Category = "Weapon|Functionality", meta = (ToolTip = "Hook up weapon functionality to this."))

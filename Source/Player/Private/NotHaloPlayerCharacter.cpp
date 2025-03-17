@@ -19,14 +19,25 @@ ANotHaloPlayerCharacter::ANotHaloPlayerCharacter()
 void ANotHaloPlayerCharacter::BeginPlay()
 {
 	Super::BeginPlay();
-
-	PrimaryWeaponSocket = GetMesh()->GetSocketByName(PrimaryWeaponSocketName);
-	SecondaryWeaponSocket = GetMesh()->GetSocketByName(SecondaryWeaponSocketName);
+	
+	PrimaryWeaponSocketMesh = GetMesh();
+	SecondaryWeaponSocketMesh = GetMesh();
+	
+	PrimaryWeaponSocket = PrimaryWeaponSocketMesh ->GetSocketByName(PrimaryWeaponSocketName);
+	SecondaryWeaponSocket = SecondaryWeaponSocketMesh->GetSocketByName(SecondaryWeaponSocketName);
 	
 	FActorSpawnParameters PlayerWeaponSpawnParams;
 	PlayerWeaponSpawnParams.Owner = this;
 	PlayerWeaponSpawnParams.Instigator = this;
 	PlayerWeaponSpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+
+	//TODO Grenade shit
+	//GrenadeSpawnSocket = GetMesh()->GetSocketByName(GrenadeSpawnSocketName);
+
+	//if (!GrenadeSpawnSocket)
+	//{
+	//	UE_LOG(NotHaloPlayerLogging, Error, TEXT("Grenade Spawn Socket not found on %s!"), *GetName())
+	//}
 	
 	if (InitialPrimaryWeapon)
 	{
@@ -102,7 +113,7 @@ void ANotHaloPlayerCharacter::Crouch(bool bClientSimulation)
 }
 
 //Damages the Player. Death is handled in UpdateHealth()
-void ANotHaloPlayerCharacter::TakeDamage(int Damage)
+void ANotHaloPlayerCharacter::NotHaloApplyDamage(int Damage)
 {
 	if (CurrentHealth <= 0)
 	{
@@ -283,11 +294,26 @@ void ANotHaloPlayerCharacter::RefreshPrimaryWeaponSocket()
 {
 	if (PrimaryWeaponSocket)
 	{
-		PrimaryWeaponSocket->AttachActor(PrimaryWeapon, GetMesh());
+		PrimaryWeaponSocket->AttachActor(PrimaryWeapon, PrimaryWeaponSocketMesh);
 	}
 	else
 	{
 		UE_LOG(NotHaloPlayerLogging, Error, TEXT("Unable to refresh Primary Weapon Socket!"))
+	}
+}
+
+void ANotHaloPlayerCharacter::ChangePrimaryWeaponSocket(USkeletalMeshComponent* NewMesh, FName NewSocketName)
+{
+	PrimaryWeaponSocketMesh = NewMesh;
+	PrimaryWeaponSocket = PrimaryWeaponSocketMesh->GetSocketByName(NewSocketName);
+	
+	if (PrimaryWeaponSocketMesh && PrimaryWeaponSocket)
+	{
+		PrimaryWeaponSocket->AttachActor(PrimaryWeapon, PrimaryWeaponSocketMesh);
+	}
+	else
+	{
+		UE_LOG(NotHaloPlayerLogging, Error, TEXT("Unable to change Primary Weapon Socket!"))
 	}
 }
 
@@ -300,6 +326,21 @@ void ANotHaloPlayerCharacter::RefreshSecondaryWeaponSocket()
 	else
 	{
 		UE_LOG(NotHaloPlayerLogging, Error, TEXT("Unable to refresh Secondary Weapon Socket!"))
+	}
+}
+
+void ANotHaloPlayerCharacter::ChangeSecondaryWeaponSocket(USkeletalMeshComponent* NewMesh, FName NewSocketName)
+{
+	SecondaryWeaponSocketMesh = NewMesh;
+	SecondaryWeaponSocket = SecondaryWeaponSocketMesh->GetSocketByName(NewSocketName);
+	
+	if (SecondaryWeaponSocketMesh && SecondaryWeaponSocket)
+	{
+		SecondaryWeaponSocket->AttachActor(SecondaryWeapon, SecondaryWeaponSocketMesh);
+	}
+	else
+	{
+		UE_LOG(NotHaloPlayerLogging, Error, TEXT("Unable to change Secondary Weapon Socket!"))
 	}
 }
 

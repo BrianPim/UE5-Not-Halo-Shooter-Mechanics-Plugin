@@ -6,6 +6,9 @@
 #include "GameFramework/Actor.h"
 #include "NotHaloGrenade.generated.h"
 
+//Forward Declarations
+class UProjectileMovementComponent;
+
 //Delegate Declarations
 //Delegate for grenade detonating.
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FGrenadeDetonated);
@@ -24,6 +27,13 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category = "Grenade|Functionality")
 	void DetonateGrenade();
+
+	//Mesh
+	UPROPERTY(EditAnywhere, BlueprintReadOnly)
+	TObjectPtr<UStaticMeshComponent> GrenadeMesh;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly)
+	TObjectPtr<UProjectileMovementComponent> ProjectileMovementComponent;
 
 	//Delegates
 	FGrenadeDetonated OnGrenadeDetonation;

@@ -72,9 +72,9 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Player|Movement", meta = (AllowPrivateAccess = "true"))
 	float WalkSpeed = 400.0f;
 
-	//Take Damage
+	//Apply Damage
 	UFUNCTION(BlueprintCallable, Category = "Player|Health & Shield")
-	void TakeDamage(int Damage);
+	void NotHaloApplyDamage(int Damage);
 
 	//Health
 	UFUNCTION(BlueprintPure, Category = "Player|Health & Shield")
@@ -98,9 +98,9 @@ public:
 
 	//Weapons
 	
-	UPROPERTY(EditAnywhere, Category = "Player|Weapons")
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Player|Weapons")
 	FName PrimaryWeaponSocketName;
-	UPROPERTY(EditAnywhere, Category = "Player|Weapons")
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Player|Weapons")
 	FName SecondaryWeaponSocketName;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Player|Weapons")
@@ -128,7 +128,23 @@ public:
 	void RefreshPrimaryWeaponSocket();
 
 	UFUNCTION(BlueprintCallable, Category = "Player|Weapons")
+	void ChangePrimaryWeaponSocket(USkeletalMeshComponent* NewMesh, FName NewSocketName);
+
+	UFUNCTION(BlueprintCallable, Category = "Player|Weapons")
 	void RefreshSecondaryWeaponSocket();
+
+	UFUNCTION(BlueprintCallable, Category = "Player|Weapons")
+	void ChangeSecondaryWeaponSocket(USkeletalMeshComponent* NewMesh, FName NewSocketName);
+
+	UPROPERTY(BlueprintReadOnly)
+	USkeletalMeshComponent* PrimaryWeaponSocketMesh = nullptr;
+	UPROPERTY(BlueprintReadOnly)
+	USkeletalMeshComponent* SecondaryWeaponSocketMesh = nullptr;
+	
+	UPROPERTY(BlueprintReadWrite, Category = "Player|Weapons")
+	const USkeletalMeshSocket* PrimaryWeaponSocket = nullptr;
+	UPROPERTY(BlueprintReadWrite, Category = "Player|Weapons")
+	const USkeletalMeshSocket* SecondaryWeaponSocket = nullptr;
 
 	//Grenades
 	UFUNCTION(BlueprintCallable, Category = "Player|Grenades")
@@ -231,21 +247,16 @@ private:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Player|Weapons", meta = (AllowPrivateAccess = "true"))
 	TSubclassOf<ANotHaloWeaponBase> InitialSecondaryWeapon = nullptr; //TODO Handle Initial Weapon via Game Mode
 	TObjectPtr<ANotHaloWeaponBase> SecondaryWeapon = nullptr;
-
-	UPROPERTY()
-	const USkeletalMeshSocket* PrimaryWeaponSocket = nullptr;
-	UPROPERTY()
-	const USkeletalMeshSocket* SecondaryWeaponSocket = nullptr;
 	
 	//Grenades
 	TSubclassOf<ANotHaloGrenade> CurrentGrenade = nullptr;
 
 	//Grenade Types that the Player can use
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Player|Grenades", meta = (AllowPrivateAccess = "true"))
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Player|Grenades", meta = (AllowPrivateAccess = "true"))
 	TArray<TSubclassOf<ANotHaloGrenade>> GrenadeTypes;
 	
 	static constexpr int BaseMaxGrenadeCount = 2;
-	static constexpr int BaseInitialGrenadeCount = 2;
+	static constexpr int BaseInitialGrenadeCount = 2; //TODO Handle this through engine
 	static constexpr float BaseThrowGrenadeCooldown = 1;
 	
 	float ThrowGrenadeCooldownRemaining = 0.0f;
@@ -261,6 +272,13 @@ private:
 	static constexpr int BaseDefaultScore = 0;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Player|Teams & Scoring", meta = (AllowPrivateAccess = "true"))
 	int CurrentScore = BaseDefaultScore;
+
+	//Left Hand socket is used when throwing grenades. If left empty or socket can't be found, grenade will spawn from center of player.
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Player|Mesh", meta = (AllowPrivateAccess = "true"))
+	FName GrenadeSpawnSocketName;
+	
+	UPROPERTY(BlueprintReadOnly, Category = "Player|Mesh", meta = (AllowPrivateAccess = "true"))
+	const USkeletalMeshSocket* GrenadeSpawnSocket = nullptr;
 	
 	GENERATED_BODY()
 };

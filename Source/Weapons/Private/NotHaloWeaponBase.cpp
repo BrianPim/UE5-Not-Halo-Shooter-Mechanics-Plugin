@@ -18,13 +18,6 @@ void ANotHaloWeaponBase::BeginPlay()
 {
 	Super::BeginPlay();
 
-	LeftHandSocket = WeaponMesh->GetSocketByName(LeftHandSocketName);
-
-	if (!LeftHandSocket)
-	{
-		UE_LOG(NotHaloWeaponsLogging, Error, TEXT("Left Hand Socket not found on %s!"), *WeaponName)
-	}
-
 	CurrentMagazineAmmoCount = MaxMagazineAmmoCount;
 	CurrentReserveAmmoCount = MaxReserveAmmoCount;
 }

@@ -10,7 +10,7 @@
 class UStaticMeshComponent;
 class UProjectileMovementComponent;
 
-UCLASS()
+UCLASS(Abstract)
 class WEAPONS_API ANotHaloProjectile : public AActor
 {
 public:
@@ -35,22 +35,11 @@ protected:
 	virtual void BeginPlay() override;
 
 private:
-	//Functionality
-	static constexpr float BaseLifeDuration = 5.0f;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Projectile|Functionality", meta = (AllowPrivateAccess = "true"))
-	float LifeDuration = BaseLifeDuration;
-	float LifeDurationRemaining = BaseLifeDuration;
-	
 	//Damage
 	static constexpr int BaseDamage = 10;
 	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Projectile|Damage", meta = (AllowPrivateAccess = "true"))
 	int Damage;
-
-	//Physics
-	static constexpr float BaseProjectileSpeed = 5000;
-	static constexpr float BaseProjectileGravityScale = 0;
 	
 	GENERATED_BODY()
 };

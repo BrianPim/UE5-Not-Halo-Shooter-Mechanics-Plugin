@@ -3,12 +3,18 @@
 
 #include "NotHaloGrenade.h"
 #include "NotHaloWeaponsLogging.h"
+#include "GameFramework/ProjectileMovementComponent.h"
 
 // Sets default values
 ANotHaloGrenade::ANotHaloGrenade()
 {
 	// Set this actor to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = true;
+
+	GrenadeMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("Projectile Mesh"));
+	RootComponent = GrenadeMesh;
+	
+	ProjectileMovementComponent = CreateDefaultSubobject<UProjectileMovementComponent>(TEXT("Projectile Movement Component"));
 }
 
 // Called when the game starts or when spawned
