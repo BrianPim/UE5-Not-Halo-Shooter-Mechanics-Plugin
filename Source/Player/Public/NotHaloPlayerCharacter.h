@@ -69,9 +69,9 @@ public:
 	virtual void Tick(float DeltaTime) override;
 	virtual void SetupPlayerInputComponent(UInputComponent* PlayerInputComponent) override;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Player|Movement", meta = (AllowPrivateAccess = "true"))
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Player|Movement")
 	float WalkSpeed = 400.0f;
-
+	
 	//Apply Damage
 	UFUNCTION(BlueprintCallable, Category = "Player|Health & Shield")
 	void NotHaloApplyDamage(int Damage);
@@ -135,6 +135,15 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category = "Player|Weapons")
 	void ChangeSecondaryWeaponSocket(USkeletalMeshComponent* NewMesh, FName NewSocketName);
+
+	UFUNCTION(BlueprintCallable, Category = "Player|Weapons")
+	void UseScope();
+
+	UFUNCTION(BlueprintCallable, Category = "Player|Weapons")
+	void UseScopeCustomZoom(float CustomZoom);
+
+	UFUNCTION(BlueprintCallable, Category = "Player|Weapons")
+	void UnScope();
 
 	UPROPERTY(BlueprintReadOnly)
 	USkeletalMeshComponent* PrimaryWeaponSocketMesh = nullptr;
@@ -227,6 +236,11 @@ protected:
 	virtual void BeginPlay() override;
 
 private:
+	//Player Camera
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Player|Camera", meta = (AllowPrivateAccess = "true"))
+	TObjectPtr<UCameraComponent> PlayerCamera;
+	float BaseFOV;
+	
 	//Health
 	static constexpr int BaseMaxHealthValue = 100;
 	int MaxHealth = BaseMaxHealthValue;
@@ -247,6 +261,8 @@ private:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Player|Weapons", meta = (AllowPrivateAccess = "true"))
 	TSubclassOf<ANotHaloWeaponBase> InitialSecondaryWeapon = nullptr; //TODO Handle Initial Weapon via Game Mode
 	TObjectPtr<ANotHaloWeaponBase> SecondaryWeapon = nullptr;
+
+	int CurrentScopeLevel = 0;
 	
 	//Grenades
 	TSubclassOf<ANotHaloGrenade> CurrentGrenade = nullptr;

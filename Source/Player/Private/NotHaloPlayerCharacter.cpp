@@ -13,13 +13,17 @@ ANotHaloPlayerCharacter::ANotHaloPlayerCharacter()
 {
 	// Set this character to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = true;
+	PlayerCamera = CreateDefaultSubobject<UCameraComponent>(TEXT("Player Camera"));
+	PlayerCamera->AttachToComponent(RootComponent, FAttachmentTransformRules::KeepRelativeTransform);
 }
 
 // Called when the game starts or when spawned
 void ANotHaloPlayerCharacter::BeginPlay()
 {
 	Super::BeginPlay();
-	
+
+	BaseFOV = PlayerCamera->FieldOfView;
+
 	PrimaryWeaponSocketMesh = GetMesh();
 	SecondaryWeaponSocketMesh = GetMesh();
 	
@@ -223,6 +227,11 @@ void ANotHaloPlayerCharacter::UseWeapon()
 {
 	if (PrimaryWeapon)
 	{
+		if (PrimaryWeapon->ScopeType == EScopeType::Binoculars && PrimaryWeapon->ScopedZoomStages.Num() > 0)
+		{
+			UnScope();
+		}
+		
 		PrimaryWeapon->UseWeapon();
 	}
 	else
@@ -257,6 +266,8 @@ void ANotHaloPlayerCharacter::SwitchWeapon()
 		UE_LOG(NotHaloPlayerLogging, Error, TEXT("Secondary Weapon is null! Unable to SWITCH weapons!"));
 		return;
 	}
+
+	UnScope();
 	
 	TObjectPtr<ANotHaloWeaponBase> WeaponToSwitch = PrimaryWeapon;
 
@@ -274,6 +285,8 @@ void ANotHaloPlayerCharacter::SwitchWeapon()
 //Drops Player's current Primary Weapon for a new Weapon
 void ANotHaloPlayerCharacter::PickUpNewWeapon(ANotHaloWeaponBase* NewWeapon)
 {
+	UnScope();
+	
 	if (PrimaryWeapon)
 	{
 		TObjectPtr<ANotHaloWeaponBase> WeaponToDrop = PrimaryWeapon;
@@ -342,6 +355,43 @@ void ANotHaloPlayerCharacter::ChangeSecondaryWeaponSocket(USkeletalMeshComponent
 	{
 		UE_LOG(NotHaloPlayerLogging, Error, TEXT("Unable to change Secondary Weapon Socket!"))
 	}
+}
+
+void ANotHaloPlayerCharacter::UseScope()
+{
+	if (!PrimaryWeapon)
+	{
+		UE_LOG(NotHaloPlayerLogging, Error, TEXT("Primary Weapon is null! Unable to SCOPE!"))
+	}
+
+	if (CurrentScopeLevel < PrimaryWeapon->ScopedZoomStages.Num())
+	{
+		PlayerCamera->SetFieldOfView(BaseFOV / PrimaryWeapon->ScopedZoomStages[CurrentScopeLevel]);
+		CurrentScopeLevel++;
+	}
+	else
+	{
+		UnScope();
+	}
+}
+
+void ANotHaloPlayerCharacter::UseScopeCustomZoom(float CustomZoom)
+{
+	if (!PrimaryWeapon)
+	{
+		UE_LOG(NotHaloPlayerLogging, Error, TEXT("Primary Weapon is null! Unable to SCOPE!"))
+	}
+
+	PlayerCamera->SetFieldOfView(BaseFOV / CustomZoom);
+
+	//If the player uses the zoom input again after a custom zoom is passed we want to return the FOV to its base state
+	CurrentScopeLevel = 10000; 
+}
+
+void ANotHaloPlayerCharacter::UnScope()
+{
+	PlayerCamera->SetFieldOfView(BaseFOV);
+	CurrentScopeLevel = 0;
 }
 
 

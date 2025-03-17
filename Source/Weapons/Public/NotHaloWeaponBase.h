@@ -9,9 +9,16 @@
 UENUM(BlueprintType)
 enum class EScopeType: uint8
 {
-	ShortRange UMETA(Tooltip = "Utilizes Binoculars. De-scopes on firing weapon. E.g. Assault Rifle"),
-	MediumRange UMETA(Tooltip = "Single-stage scope. E.g. Battle Rifle"),
-	LongRange UMETA(Tooltip = "Two-stage scope. E.g. Sniper Rifle")
+	Binoculars UMETA(Tooltip = "Utilizes Binoculars. De-scopes on firing weapon. E.g. Assault Rifle"),
+	Scope UMETA(Tooltip = "Scoped weapon, defined in the details panel. E.g. Battle Rifle, Sniper Rifle"),
+};
+
+UENUM(BlueprintType)
+enum class EFiringMode: uint8
+{
+	SemiAuto UMETA(Tooltip = "One weapon use per input down."),
+	BurstFire UMETA(Tooltip = "X uses per input down in rapid succession, defined in the details panel."),
+	FullAuto UMETA(Tooltip = "Weapon is used until input is released or ammo runs out.")
 };
 
 //Delegate Declarations
@@ -80,6 +87,12 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Weapon|Functionality")
 	void DropWeapon(FVector Position);
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Weapon|Functionality")
+	EScopeType ScopeType = BaseScopeType;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Weapon|Functionality")
+	TArray<float> ScopedZoomStages = { BaseZoom };
+
 	//Ammo
 	UFUNCTION(BlueprintPure, Category = "Weapon|Ammo")
 	int GetMagazineAmmoCount();
@@ -112,7 +125,7 @@ public:
 
 	//Mesh
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Weapon|Mesh")
+	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Weapon|Mesh")
 	TObjectPtr<USkeletalMeshComponent> WeaponMesh;
 
 	//Delegates
@@ -142,9 +155,12 @@ private:
 	static constexpr float BaseUseWeaponCooldown = 0.25f;
 	static constexpr float BaseEffectiveRange = 30.0f;
 	static constexpr float BaseTimeToReload = 1.0f;
+	static constexpr float BaseZoom = 2.0f;
 
 	static constexpr bool BaseAllowReloadCancel = false;
 	static constexpr bool BaseHandleReloadWithDuration = true;
+
+	static constexpr EScopeType BaseScopeType = EScopeType::Binoculars;
 
 	//Time until the player is allowed to use the weapon again
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Weapon|Functionality", meta = (AllowPrivateAccess = "true"))

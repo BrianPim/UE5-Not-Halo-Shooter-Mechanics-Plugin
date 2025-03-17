@@ -13,7 +13,7 @@ void ANotHaloPlayerController::OnPossess(APawn* aPawn)
 
 	//Store a reference to the Player's Pawn
 	PlayerCharacter = Cast<ANotHaloPlayerCharacter>(aPawn);
-	checkf(PlayerCharacter, TEXT("ANotHaloPlayerController derived classes should only possess ACharacterBBBase derived pawns"));
+	checkf(PlayerCharacter, TEXT("ANotHaloPlayerController derived classes should only possess ANotHaloPlayerCharacter derived pawns"));
 	
 	//Store a reference to the HUD
 	// PlayerHud = Cast<AHudBB>(GetHUD());
@@ -128,9 +128,6 @@ void ANotHaloPlayerController::HandleMove(const FInputActionValue& ActionValue)
 
 void ANotHaloPlayerController::HandleJump()
 {
-	//Debug Logging
-	UE_LOG(NotHaloPlayerLogging, Display, TEXT("Jump"));
-	
 	//Make the Player's Character Pawn jump, disable crouch if active
 	if (PlayerCharacter)
 	{
@@ -141,9 +138,6 @@ void ANotHaloPlayerController::HandleJump()
 
 void ANotHaloPlayerController::HandleCrouch()
 {
-	//Debug Logging
-	UE_LOG(NotHaloPlayerLogging, Display, TEXT("Crouch"));
-	
 	if (PlayerCharacter)
 	{
 		if (PlayerCharacter->bIsCrouched)
@@ -159,43 +153,64 @@ void ANotHaloPlayerController::HandleCrouch()
 
 void ANotHaloPlayerController::HandleUseWeapon()
 {
-	PlayerCharacter->UseWeapon();
+	if (PlayerCharacter)
+	{
+		PlayerCharacter->UseWeapon();
+	}
 }
 
 void ANotHaloPlayerController::HandleSwitchWeapon()
 {
-	PlayerCharacter->SwitchWeapon();
+	if (PlayerCharacter)
+	{
+		PlayerCharacter->SwitchWeapon();
+	}
 }
 
 void ANotHaloPlayerController::HandleReloadWeapon()
 {
-	PlayerCharacter->ReloadWeapon();
+	if (PlayerCharacter)
+	{
+		PlayerCharacter->ReloadWeapon();
+	}
 }
 
 void ANotHaloPlayerController::HandleUseGrenade()
 {
-	PlayerCharacter->ThrowGrenade();
+	if (PlayerCharacter)
+	{
+		PlayerCharacter->ThrowGrenade();
+	}
 }
 
 void ANotHaloPlayerController::HandleSwitchGrenade()
 {
-	PlayerCharacter->SwitchGrenadeType();
+	if (PlayerCharacter)
+	{
+		PlayerCharacter->SwitchGrenadeType();
+	}
 }
 
 void ANotHaloPlayerController::HandleMelee()
 {
-	//Debug Logging
-	UE_LOG(NotHaloPlayerLogging, Display, TEXT("Melee"));
+	if (PlayerCharacter)
+	{
+		UE_LOG(NotHaloPlayerLogging, Display, TEXT("Melee"));
+	}
 }
 
 void ANotHaloPlayerController::HandleScope()
 {
-	//Debug Logging
-	UE_LOG(NotHaloPlayerLogging, Display, TEXT("Scope"));
+	if (PlayerCharacter)
+	{
+		PlayerCharacter->UseScope();
+	}
 }
 
 void ANotHaloPlayerController::HandleInteract()
 {
-	//Debug Logging
-	UE_LOG(NotHaloPlayerLogging, Display, TEXT("Interact"));
+	if (PlayerCharacter)
+	{
+		UE_LOG(NotHaloPlayerLogging, Display, TEXT("Interact"));
+	}
 }
