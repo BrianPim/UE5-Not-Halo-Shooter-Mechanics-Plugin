@@ -39,6 +39,10 @@ public:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Player Input|Player Weapons")
 	TObjectPtr<UInputAction> ActionUseWeapon = nullptr;
 
+	//Input Action to map to the end of use weapon
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Player Input|Player Weapons")
+	TObjectPtr<UInputAction> ActionUseWeaponEnd = nullptr;
+
 	//Input Action to map to switch weapon
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Player Input|Player Weapons")
 	TObjectPtr<UInputAction> ActionSwitchWeapon = nullptr;
@@ -79,6 +83,7 @@ protected:
 	void HandleJump();
 	void HandleCrouch();
 	void HandleUseWeapon();
+	void HandleUseWeaponEnd();
 	void HandleSwitchWeapon();
 	void HandleReloadWeapon();
 	void HandleUseGrenade();

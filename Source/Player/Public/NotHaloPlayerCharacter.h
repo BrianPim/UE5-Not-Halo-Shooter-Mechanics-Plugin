@@ -115,6 +115,8 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Player|Weapons")
 	void UseWeapon();
 
+	void UseWeaponEnd();
+
 	UFUNCTION(BlueprintCallable, Category = "Player|Weapons")
 	void ReloadWeapon();
 

@@ -60,6 +60,11 @@ void ANotHaloPlayerController::OnPossess(APawn* aPawn)
 		EnhancedInputComponent->BindAction(ActionUseWeapon, ETriggerEvent::Triggered, this, &ANotHaloPlayerController::HandleUseWeapon);
 	}
 
+	if (ActionUseWeaponEnd)
+	{
+		EnhancedInputComponent->BindAction(ActionUseWeaponEnd, ETriggerEvent::Triggered, this, &ANotHaloPlayerController::HandleUseWeaponEnd);
+	}
+
 	if (ActionSwitchWeapon)
 	{
 		EnhancedInputComponent->BindAction(ActionSwitchWeapon, ETriggerEvent::Triggered, this, &ANotHaloPlayerController::HandleSwitchWeapon);
@@ -153,9 +158,21 @@ void ANotHaloPlayerController::HandleCrouch()
 
 void ANotHaloPlayerController::HandleUseWeapon()
 {
+	UE_LOG(NotHaloPlayerLogging, Warning, TEXT("Use Weapon Start Input received"));
+
 	if (PlayerCharacter)
 	{
 		PlayerCharacter->UseWeapon();
+	}
+}
+
+void ANotHaloPlayerController::HandleUseWeaponEnd()
+{
+	UE_LOG(NotHaloPlayerLogging, Warning, TEXT("Use Weapon End Input received"));
+
+	if (PlayerCharacter)
+	{
+		PlayerCharacter->UseWeaponEnd();
 	}
 }
 

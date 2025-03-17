@@ -45,6 +45,9 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Weapon|Functionality")
 	virtual void UseWeapon();
 
+	//Only used if FiringMode = FullAuto
+	void UseWeaponEnd();
+
 	UFUNCTION(BlueprintPure, Category = "Weapon|Functionality")
 	bool CanUseWeapon();
 
@@ -89,6 +92,9 @@ public:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Weapon|Functionality")
 	EScopeType ScopeType = BaseScopeType;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Weapon|Functionality")
+	EFiringMode FiringMode = BaseFiringMode;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Weapon|Functionality")
 	TArray<float> ScopedZoomStages = { BaseZoom };
@@ -161,6 +167,9 @@ private:
 	static constexpr bool BaseHandleReloadWithDuration = true;
 
 	static constexpr EScopeType BaseScopeType = EScopeType::Binoculars;
+	static constexpr EFiringMode BaseFiringMode = EFiringMode::SemiAuto;
+
+	bool UsingWeapon = false;
 
 	//Time until the player is allowed to use the weapon again
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Weapon|Functionality", meta = (AllowPrivateAccess = "true"))

@@ -240,6 +240,19 @@ void ANotHaloPlayerCharacter::UseWeapon()
 	}
 }
 
+void ANotHaloPlayerCharacter::UseWeaponEnd()
+{
+	if (PrimaryWeapon)
+	{
+	 	PrimaryWeapon->UseWeaponEnd();
+	}
+	else
+	{
+		UE_LOG(NotHaloPlayerLogging, Error, TEXT("Primary Weapon is null! Unable to END use weapon!"));
+		UE_LOG(NotHaloPlayerLogging, Error, TEXT("How the hell did you even manage to get here?"));
+	}
+}
+
 void ANotHaloPlayerCharacter::ReloadWeapon()
 {
 	if (PrimaryWeapon)

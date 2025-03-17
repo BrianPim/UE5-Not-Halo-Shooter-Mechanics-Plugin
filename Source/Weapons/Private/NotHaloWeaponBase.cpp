@@ -38,8 +38,21 @@ void ANotHaloWeaponBase::Tick(float DeltaTime)
 			FinishReloadWeapon();
 		}
 	}
-	
-	if (UseWeaponCooldownRemaining > 0.0f)
+
+	if (FiringMode == EFiringMode::FullAuto && UsingWeapon)
+	{
+		if (UseWeaponCooldownRemaining > 0.0f)
+		{
+			UseWeaponCooldownRemaining -= DeltaTime;
+		}
+		else
+		{
+			//Setting this to false to guarantee UseWeapon() doesn't fire multiple times here
+			UsingWeapon = false;
+			UseWeapon();
+		}
+	}
+	else if (UseWeaponCooldownRemaining > 0.0f)
 	{
 		UseWeaponCooldownRemaining -= DeltaTime;
 	}
@@ -52,6 +65,8 @@ void ANotHaloWeaponBase::UseWeapon()
 {
 	if (!CanUseWeapon())
 		return;
+
+	UsingWeapon = true;
 	
 	//In case we interrupted reloading
 	Reloading = false;
@@ -62,6 +77,16 @@ void ANotHaloWeaponBase::UseWeapon()
 
 	AddToMagazineAmmoCount(-AmmoConsumedOnUse);
 	StartCooldown();
+
+	if (FiringMode != EFiringMode::FullAuto)
+	{
+		UsingWeapon = false;
+	}
+}
+
+void ANotHaloWeaponBase::UseWeaponEnd()
+{
+	UsingWeapon = false;
 }
 
 //Checks if weapon can be used
