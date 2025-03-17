@@ -78,6 +78,8 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Weapon|Functionality")
 	void StartCooldown();
 	
+	void StartBurstFireCooldown();
+
 	UFUNCTION(BlueprintCallable, Category = "Weapon|Functionality")
 	void ForceFinishCooldown();
 
@@ -90,14 +92,14 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Weapon|Functionality")
 	void DropWeapon(FVector Position);
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Weapon|Functionality")
-	EScopeType ScopeType = BaseScopeType;
+	UFUNCTION(BlueprintPure, Category = "Weapon|Functionality")
+	EScopeType GetScopeType();
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Weapon|Functionality")
-	EFiringMode FiringMode = BaseFiringMode;
+	UFUNCTION(BlueprintPure, Category = "Weapon|Functionality")
+	float GetZoomMultiplerAtIndex(int Index);
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Weapon|Functionality")
-	TArray<float> ScopedZoomStages = { BaseZoom };
+	UFUNCTION(BlueprintPure, Category = "Weapon|Functionality")
+	int GetNumOfScopedZoomStages();
 
 	//Ammo
 	UFUNCTION(BlueprintPure, Category = "Weapon|Ammo")
@@ -118,6 +120,11 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Weapon|Ammo")
 	void AddToReserveAmmoCount(int DeltaAmmo);
 
+	//Mesh
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Weapon|Mesh")
+	TObjectPtr<USkeletalMeshComponent> WeaponMesh;
+
 	//Util
 	
 	UFUNCTION(BlueprintPure, Category = "Weapon|Util")
@@ -129,10 +136,11 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Weapon|Util")
 	void SetWeaponHolderPawn(APawn* NewHolder);
 
-	//Mesh
+	UFUNCTION(BlueprintPure, Category = "Weapon|Util")
+	bool GetWeaponInUse();
 
-	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Weapon|Mesh")
-	TObjectPtr<USkeletalMeshComponent> WeaponMesh;
+	UFUNCTION(BlueprintPure, Category = "Weapon|Util")
+	bool GetZoomAllowed();
 
 	//Delegates
 	UPROPERTY(BlueprintAssignable, Category = "Weapon|Functionality", meta = (ToolTip = "Hook up weapon functionality to this."))
@@ -158,41 +166,66 @@ protected:
 
 private:
 	//Functionality
+	static constexpr int BaseBurstFireNumberOfShots = 3;
+	
 	static constexpr float BaseUseWeaponCooldown = 0.25f;
 	static constexpr float BaseEffectiveRange = 30.0f;
-	static constexpr float BaseTimeToReload = 1.0f;
 	static constexpr float BaseZoom = 2.0f;
-
-	static constexpr bool BaseAllowReloadCancel = false;
-	static constexpr bool BaseHandleReloadWithDuration = true;
+	static constexpr float BaseBurstFireTimeBetweenShots = 0.1f;
 
 	static constexpr EScopeType BaseScopeType = EScopeType::Binoculars;
 	static constexpr EFiringMode BaseFiringMode = EFiringMode::SemiAuto;
 
-	bool UsingWeapon = false;
-
+	bool ZoomAllowed = true;
+	bool WeaponInUse = false;
+	
+	int BurstFireQueue = 0;
+	
 	//Time until the player is allowed to use the weapon again
+	//For Burst Fire weapons this time starts AFTER the burst is complete
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Weapon|Functionality", meta = (AllowPrivateAccess = "true"))
 	float UseWeaponCooldown = BaseUseWeaponCooldown;
 	
 	UPROPERTY(BlueprintReadOnly, Category = "Weapon|Functionality", meta = (AllowPrivateAccess = "true"))
 	float UseWeaponCooldownRemaining = 0.0f;
 
-	//Allows for reload to be cancelled with other actions, E.g. using weapon
+	UPROPERTY(EditAnywhere, Category = "Weapon|Functionality", meta = (AllowPrivateAccess = "true"))
+	EScopeType ScopeType = BaseScopeType;
+	
+	UPROPERTY(EditAnywhere, Category = "Weapon|Functionality", meta = (AllowPrivateAccess = "true"))
+	TArray<float> ScopedZoomStages = { BaseZoom };
+
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Weapon|Functionality", meta = (AllowPrivateAccess = "true"))
+	EFiringMode FiringMode = BaseFiringMode;
+	
+	UPROPERTY(EditAnywhere, Category = "Weapon|Functionality", meta = (EditCondition = "FiringMode == EFiringMode::BurstFire"))
+	int BurstFireNumberOfShots = BaseBurstFireNumberOfShots;
+
+	UPROPERTY(EditAnywhere, Category = "Weapon|Functionality", meta = (EditCondition = "FiringMode == EFiringMode::BurstFire"))
+	float BurstFireTimeBetweenShots = BaseBurstFireTimeBetweenShots;
+
+	float BurstFireCooldownRemaining = 0.0f;
+	
+	//Reloading
+	static constexpr float BaseTimeToReload = 1.0f;
+	static constexpr bool BaseAllowReloadCancel = false;
+	static constexpr bool BaseHandleReloadWithDuration = true;
+
+	//Allows for reload to be cancelled with other actions, E.g. using weapon
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Weapon|Reloading", meta = (AllowPrivateAccess = "true"))
 	bool AllowReloadCancel = BaseAllowReloadCancel;
 
 	//Set to false if reload is being handled elsewhere, E.g. through an animation montage notify
-	UPROPERTY(EditAnywhere, Category = "Weapon|Functionality")
+	UPROPERTY(EditAnywhere, Category = "Weapon|Reloading")
 	bool HandleReloadWithDuration = BaseHandleReloadWithDuration;
 	
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Weapon|Functionality", meta = (AllowPrivateAccess = "HandleReloadWithDuration == true", EditCondition = "HandleReloadWithDuration == true"))
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Weapon|Reloading", meta = (AllowPrivateAccess = "HandleReloadWithDuration == true", EditCondition = "HandleReloadWithDuration == true"))
 	float TimeToReload = BaseTimeToReload;
 	
-	UPROPERTY(BlueprintReadOnly, Category = "Weapon|Functionality", meta = (AllowPrivateAccess = "HandleReloadWithDuration == true", EditCondition = "HandleReloadWithDuration == true"))
+	UPROPERTY(BlueprintReadOnly, Category = "Weapon|Reloading", meta = (AllowPrivateAccess = "HandleReloadWithDuration == true", EditCondition = "HandleReloadWithDuration == true"))
 	float ReloadDurationRemaining = 0.0f;
 	
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Weapon|Functionality", meta = (AllowPrivateAccess = "true"))
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Weapon|Reloading", meta = (AllowPrivateAccess = "true"))
 	float EffectiveRange = BaseEffectiveRange;
 	
 	//Ammo

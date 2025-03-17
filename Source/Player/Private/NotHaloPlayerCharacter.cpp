@@ -227,7 +227,13 @@ void ANotHaloPlayerCharacter::UseWeapon()
 {
 	if (PrimaryWeapon)
 	{
-		if (PrimaryWeapon->ScopeType == EScopeType::Binoculars && PrimaryWeapon->ScopedZoomStages.Num() > 0)
+		if (PrimaryWeapon->GetWeaponInUse())
+		{
+			UE_LOG(NotHaloPlayerLogging, Warning, TEXT("Weapon already in use!"));
+			return;
+		}
+		
+		if (PrimaryWeapon->GetScopeType() == EScopeType::Binoculars && PrimaryWeapon->GetNumOfScopedZoomStages() > 0)
 		{
 			UnScope();
 		}
@@ -375,11 +381,18 @@ void ANotHaloPlayerCharacter::UseScope()
 	if (!PrimaryWeapon)
 	{
 		UE_LOG(NotHaloPlayerLogging, Error, TEXT("Primary Weapon is null! Unable to SCOPE!"))
+		return;
 	}
 
-	if (CurrentScopeLevel < PrimaryWeapon->ScopedZoomStages.Num())
+	if (!PrimaryWeapon->GetZoomAllowed())
 	{
-		PlayerCamera->SetFieldOfView(BaseFOV / PrimaryWeapon->ScopedZoomStages[CurrentScopeLevel]);
+		UE_LOG(NotHaloPlayerLogging, Warning, TEXT("Not allowed to use the scope right now!"))
+		return;
+	}
+
+	if (CurrentScopeLevel < PrimaryWeapon->GetNumOfScopedZoomStages())
+	{
+		PlayerCamera->SetFieldOfView(BaseFOV / PrimaryWeapon->GetZoomMultiplerAtIndex(CurrentScopeLevel));
 		CurrentScopeLevel++;
 	}
 	else

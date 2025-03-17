@@ -7,7 +7,7 @@
 ANotHaloWeaponBase::ANotHaloWeaponBase()
 {
 	PrimaryActorTick.bCanEverTick = true;
-	PrimaryActorTick.TickInterval = 0.1f; //We don't need tick to run every frame
+	PrimaryActorTick.TickInterval = .02f;
 
 	WeaponMesh = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("Weapon Mesh"));
 	RootComponent = WeaponMesh;
@@ -22,7 +22,7 @@ void ANotHaloWeaponBase::BeginPlay()
 	CurrentReserveAmmoCount = MaxReserveAmmoCount;
 }
 
-// Called every 0.1 seconds
+// Called every .02 seconds
 void ANotHaloWeaponBase::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
@@ -39,22 +39,19 @@ void ANotHaloWeaponBase::Tick(float DeltaTime)
 		}
 	}
 
-	if (FiringMode == EFiringMode::FullAuto && UsingWeapon)
-	{
-		if (UseWeaponCooldownRemaining > 0.0f)
-		{
-			UseWeaponCooldownRemaining -= DeltaTime;
-		}
-		else
-		{
-			//Setting this to false to guarantee UseWeapon() doesn't fire multiple times here
-			UsingWeapon = false;
-			UseWeapon();
-		}
-	}
-	else if (UseWeaponCooldownRemaining > 0.0f)
+	if (UseWeaponCooldownRemaining > 0.0f)
 	{
 		UseWeaponCooldownRemaining -= DeltaTime;
+	}
+	else if (FiringMode == EFiringMode::FullAuto && WeaponInUse)
+	{
+		//Setting this to false to guarantee UseWeapon() doesn't fire multiple times here
+		WeaponInUse = false;
+		UseWeapon();
+	}
+	else if (BurstFireQueue > 0)
+	{
+		UseWeapon();
 	}
 }
 
@@ -66,27 +63,55 @@ void ANotHaloWeaponBase::UseWeapon()
 	if (!CanUseWeapon())
 		return;
 
-	UsingWeapon = true;
-	
 	//In case we interrupted reloading
 	Reloading = false;
 	
+	//Burst Fire Mechanics
+	//------------------------------------------------------------------------------
+	if (FiringMode == EFiringMode::BurstFire)
+	{
+		if (!WeaponInUse && BurstFireQueue == 0)
+		{
+			BurstFireQueue = BurstFireNumberOfShots;
+		}
+		
+		BurstFireQueue--;
+
+		if (BurstFireQueue >  0)
+		{
+			WeaponInUse = true;
+			StartBurstFireCooldown();
+		}
+		else
+		{
+			WeaponInUse = false;
+			StartCooldown();
+		}
+	}
+	//------------------------------------------------------------------------------
+
+	if (FiringMode == EFiringMode::FullAuto)
+	{
+		ZoomAllowed = false;
+		WeaponInUse = true;
+	}
+
+	if (FiringMode != EFiringMode::BurstFire)
+	{
+		StartCooldown();
+	}
+	
+	AddToMagazineAmmoCount(-AmmoConsumedOnUse);
+
 	//Further weapon functionality handled via Blueprint that references OnWeaponUsed delegate.
 	OnWeaponUsed.Broadcast();
-	UE_LOG(NotHaloWeaponsLogging, Display, TEXT("%s has been used! What happens next should be handled through the OnWeaponUsed delegate in it's Blueprint Event Graph."), *WeaponName);
-
-	AddToMagazineAmmoCount(-AmmoConsumedOnUse);
-	StartCooldown();
-
-	if (FiringMode != EFiringMode::FullAuto)
-	{
-		UsingWeapon = false;
-	}
+	UE_LOG(NotHaloWeaponsLogging, Display, TEXT("%s has been used! What happens next should be handled through the OnWeaponUsed delegate in it's Blueprint Event Graph."), *WeaponName)
 }
 
 void ANotHaloWeaponBase::UseWeaponEnd()
 {
-	UsingWeapon = false;
+	ZoomAllowed = true;
+	WeaponInUse = false;
 }
 
 //Checks if weapon can be used
@@ -234,6 +259,12 @@ void ANotHaloWeaponBase::StartCooldown()
 	UseWeaponCooldownRemaining = UseWeaponCooldown;
 }
 
+//Start Weapon Cooldown, cannot be used if Active Cooldown > 0
+void ANotHaloWeaponBase::StartBurstFireCooldown()
+{
+	UseWeaponCooldownRemaining = BurstFireTimeBetweenShots;
+}
+
 //Force Weapon Cooldown to finish
 void ANotHaloWeaponBase::ForceFinishCooldown()
 {
@@ -260,6 +291,30 @@ void ANotHaloWeaponBase::DropWeapon(FVector Position)
 	DetachFromActor(FDetachmentTransformRules::KeepWorldTransform);
 	SetWeaponHolderPawn(nullptr);
 	SetActorLocation(Position);
+}
+
+//Returns Weapon's Scope Type
+EScopeType ANotHaloWeaponBase::GetScopeType()
+{
+	return ScopeType;
+}
+
+//Returns the zoom multiplier at the provided zoom stage
+float ANotHaloWeaponBase::GetZoomMultiplerAtIndex(int Index)
+{
+	if (Index >= ScopedZoomStages.Num())
+	{
+		UE_LOG(NotHaloWeaponsLogging, Error, TEXT("Provided index %d was larger than the size of the array!"), Index)
+		return 1;
+	}
+
+	return ScopedZoomStages[Index];
+}
+
+
+int ANotHaloWeaponBase::GetNumOfScopedZoomStages()
+{
+	return ScopedZoomStages.Num();
 }
 #pragma endregion
 
@@ -343,6 +398,16 @@ void ANotHaloWeaponBase::SetWeaponHolderPawn(APawn* NewHolder)
 	HolderPawn = NewHolder;
 
 	UE_LOG(NotHaloWeaponsLogging, Display, TEXT("%s is now being held by %s"), *WeaponName, *HolderPawn->GetName());
+}
+
+bool ANotHaloWeaponBase::GetWeaponInUse()
+{
+	return WeaponInUse;
+}
+
+bool ANotHaloWeaponBase::GetZoomAllowed()
+{
+	return ZoomAllowed;
 }
 
 

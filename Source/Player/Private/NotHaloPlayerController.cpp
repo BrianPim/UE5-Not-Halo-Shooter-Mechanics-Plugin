@@ -158,8 +158,6 @@ void ANotHaloPlayerController::HandleCrouch()
 
 void ANotHaloPlayerController::HandleUseWeapon()
 {
-	UE_LOG(NotHaloPlayerLogging, Warning, TEXT("Use Weapon Start Input received"));
-
 	if (PlayerCharacter)
 	{
 		PlayerCharacter->UseWeapon();
@@ -168,8 +166,6 @@ void ANotHaloPlayerController::HandleUseWeapon()
 
 void ANotHaloPlayerController::HandleUseWeaponEnd()
 {
-	UE_LOG(NotHaloPlayerLogging, Warning, TEXT("Use Weapon End Input received"));
-
 	if (PlayerCharacter)
 	{
 		PlayerCharacter->UseWeaponEnd();
