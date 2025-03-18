@@ -4,22 +4,15 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Character.h"
+#include "NotHaloShooterMechanics/Public/NotHaloTeamData.h"
 #include "NotHaloPlayerCharacter.generated.h"
+
 
 //Forward Declarations
 class UInputComponent;
 class ANotHaloWeaponBase;
 class ANotHaloGrenade;
 class UCameraComponent;
-
-//Team assignment Enum, in case we want to have team-based game modes
-UENUM(BlueprintType)
-enum class EPlayerTeam: uint8
-{
-	None UMETA(Tooltip = "Player is not on a team."),
-	BlueTeam UMETA(Tooltip = "Player is on the Blue team."),
-	RedTeam UMETA(Tooltip = "Player is on the Red team.")
-};
 
 //Delegate Declarations
 //Delegate for integer stats are changed
@@ -34,26 +27,29 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FCharacterFloatStatUpdated,
 												float, NewValue,
 												float, MaxValue);
 
-//Delegate for when the player dies
-DECLARE_DYNAMIC_MULTICAST_DELEGATE(FPlayerIsDead);
+//Delegate for using weapon, melee, etc.
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FPlayerUpdate);
 
-//Delegate for weapon change
-DECLARE_DYNAMIC_MULTICAST_DELEGATE(FWeaponsUpdated);
-
-//Delegate for grenade change
-DECLARE_DYNAMIC_MULTICAST_DELEGATE(FGrenadeUpdated);
 
 //Delegate for team change
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FTeamUpdated,
-												EPlayerTeam, OldValue,
-												EPlayerTeam, NewValue,
-												bool, IsSuccess);
+												FNotHaloTeamData, OldValue,
+												FNotHaloTeamData, NewValue,
+												bool, Success);
 
 //Delegate for score change
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FScoreUpdated,
 												int32, OldValue,
 												int32, NewValue,
 												bool, Success);
+
+//Delegate for score change
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FPlayerInteraction,
+												ANotHaloPlayerCharacter*, Caster,
+												ANotHaloPlayerCharacter*, OtherPlayer);
+
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FPlayerCastHit, FHitResult, Hit);
+
 
 UCLASS(Abstract)
 class PLAYER_API ANotHaloPlayerCharacter : public ACharacter
@@ -74,7 +70,11 @@ public:
 	
 	//Apply Damage
 	UFUNCTION(BlueprintCallable, Category = "Player|Health & Shield")
-	void NotHaloApplyDamage(int Damage);
+	void NotHaloApplyDamage(ANotHaloPlayerCharacter* Caster, int Damage);
+
+	//Insta-kill
+	UFUNCTION(BlueprintCallable, Category = "Player|Health & Shield")
+	void Assassination(ANotHaloPlayerCharacter* Caster);
 
 	//Health
 	UFUNCTION(BlueprintPure, Category = "Player|Health & Shield")
@@ -127,13 +127,13 @@ public:
 	void PickUpNewWeapon(ANotHaloWeaponBase* NewWeapon);
 
 	UFUNCTION(BlueprintCallable, Category = "Player|Weapons")
-	void RefreshPrimaryWeaponSocket();
+	void RefreshPrimaryWeaponModel();
 
 	UFUNCTION(BlueprintCallable, Category = "Player|Weapons")
 	void ChangePrimaryWeaponSocket(USkeletalMeshComponent* NewMesh, FName NewSocketName);
 
 	UFUNCTION(BlueprintCallable, Category = "Player|Weapons")
-	void RefreshSecondaryWeaponSocket();
+	void RefreshSecondaryWeaponModel();
 
 	UFUNCTION(BlueprintCallable, Category = "Player|Weapons")
 	void ChangeSecondaryWeaponSocket(USkeletalMeshComponent* NewMesh, FName NewSocketName);
@@ -199,9 +199,13 @@ public:
 	UPROPERTY(EditAnywhere, Category = "Player|Grenades")
 	float ThrowGrenadeCooldown = BaseThrowGrenadeCooldown;
 
+	//Melee
+	UFUNCTION(BlueprintCallable, Category = "Player|Melee")
+	void PerformMelee();
+
 	//Teams & Scoring
-	UFUNCTION(BlueprintCallable, Category = "Player|Teams & Scoring")
-	void SetTeam(EPlayerTeam NewTeam);
+	UFUNCTION()
+	void SetTeam(FNotHaloTeamData NewTeam);
 
 	UFUNCTION(BlueprintCallable, Category = "Player|Teams & Scoring")
 	void SetScore(int DeltaScore);
@@ -214,16 +218,19 @@ public:
 	FCharacterIntStatUpdated OnShieldChanged;
 	
 	UPROPERTY(BlueprintAssignable, Category = "Player|Health & Shield")
-	FPlayerIsDead OnPlayerDied;
+	FPlayerUpdate OnPlayerDied;
 
 	UPROPERTY(BlueprintAssignable, Category = "Player|Weapons")
-	FWeaponsUpdated OnWeaponsInitialized;
+	FPlayerUpdate OnWeaponsInitialized;
 
 	UPROPERTY(BlueprintAssignable, Category = "Player|Weapons")
-	FWeaponsUpdated OnWeaponChanged;
+	FPlayerUpdate OnWeaponChanged;
 
 	UPROPERTY(BlueprintAssignable, Category = "Player|Grenades")
-	FGrenadeUpdated OnGrenadeTypeChanged;
+	FPlayerUpdate OnGrenadeTypeChanged;
+
+	UPROPERTY(BlueprintAssignable, Category = "Player|Melee")
+	FPlayerCastHit OnMeleeHit;
 
 	UPROPERTY(BlueprintAssignable, Category = "Player|Grenades")
 	FCharacterIntStatUpdated OnGrenadeCountChanged;
@@ -281,14 +288,30 @@ private:
 
 	TMap<TSubclassOf<ANotHaloGrenade>, int> GrenadeMap {};
 
-	//Teams & Scoring
-	static constexpr EPlayerTeam BaseDefaultTeam = EPlayerTeam::None;
+	//Melee
+	static constexpr float BaseMeleeRange = 150.0f;
+	static constexpr float BaseMeleeDamage = 100.0f;
+	static constexpr float BaseAssassinationThreshold = 0.5f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Player|Melee", meta = (AllowPrivateAccess = "true"))
+	float MeleeRange = BaseMeleeRange;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Player|Melee", meta = (AllowPrivateAccess = "true"))
+	float MeleeDamage = BaseMeleeDamage;
+
+	// Between -1 and 1.
+	// 1 = Melee directly behind other player
+	//-1 = Melee directly in front of other player
+	// If set to -1, all melee attacks will be assassinations (instant-kills)
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Player|Melee", meta = (AllowPrivateAccess = "true"))
+	float AssassinationThreshold = BaseAssassinationThreshold;
 	
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Player|Teams & Scoring", meta = (AllowPrivateAccess = "true"))
-	EPlayerTeam CurrentTeam = BaseDefaultTeam;
+	//Teams & Scoring
+
+	UPROPERTY(EditAnywhere, Category = "Player|Teams & Scoring", meta = (AllowPrivateAccess = "true"))
+	FNotHaloTeamData CurrentTeam;
 
 	static constexpr int BaseDefaultScore = 0;
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Player|Teams & Scoring", meta = (AllowPrivateAccess = "true"))
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Player|Teams & Scoring", meta = (AllowPrivateAccess = "true"))
 	int CurrentScore = BaseDefaultScore;
 
 	//Left Hand socket is used when throwing grenades. If left empty or socket can't be found, grenade will spawn from center of player.

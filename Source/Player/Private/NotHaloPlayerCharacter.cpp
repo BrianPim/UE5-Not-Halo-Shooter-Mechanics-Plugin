@@ -4,9 +4,11 @@
 #include "NotHaloPlayerCharacter.h"
 #include "NotHaloGrenade.h"
 #include "NotHaloPlayerLogging.h"
+#include "NotHaloTeamData.h"
 #include "NotHaloWeaponBase.h"
-#include "Engine/SkeletalMeshSocket.h"
 #include "Camera/CameraComponent.h"
+#include "Chaos/Utilities.h"
+#include "Engine/SkeletalMeshSocket.h"
 
 // Sets default values
 ANotHaloPlayerCharacter::ANotHaloPlayerCharacter()
@@ -48,7 +50,7 @@ void ANotHaloPlayerCharacter::BeginPlay()
 		PrimaryWeapon = GetWorld()->SpawnActor<ANotHaloWeaponBase>(InitialPrimaryWeapon, FVector::ZeroVector,
 															FRotator::ZeroRotator, PlayerWeaponSpawnParams);
 		PrimaryWeapon->SetWeaponHolderPawn(this);
-		RefreshPrimaryWeaponSocket();
+		RefreshPrimaryWeaponModel();
 	}
 	else
 	{
@@ -60,7 +62,7 @@ void ANotHaloPlayerCharacter::BeginPlay()
 		SecondaryWeapon = GetWorld()->SpawnActor<ANotHaloWeaponBase>(InitialSecondaryWeapon, FVector::ZeroVector,
 																FRotator::ZeroRotator, PlayerWeaponSpawnParams);
 		SecondaryWeapon->SetWeaponHolderPawn(this);
-		RefreshSecondaryWeaponSocket();
+		RefreshSecondaryWeaponModel();
 	}
 	else
 	{
@@ -117,7 +119,7 @@ void ANotHaloPlayerCharacter::Crouch(bool bClientSimulation)
 }
 
 //Damages the Player. Death is handled in UpdateHealth()
-void ANotHaloPlayerCharacter::NotHaloApplyDamage(int Damage)
+void ANotHaloPlayerCharacter::NotHaloApplyDamage(ANotHaloPlayerCharacter* Caster, int Damage)
 {
 	if (CurrentHealth <= 0)
 	{
@@ -139,7 +141,12 @@ void ANotHaloPlayerCharacter::NotHaloApplyDamage(int Damage)
 		}
 	}
 
-	UE_LOG(NotHaloPlayerLogging, Display, TEXT("%s took %d Damage!"), *GetName(), Damage)
+	UE_LOG(NotHaloPlayerLogging, Display, TEXT("%s took %d Damage from %s!"), *GetName(), Damage, *Caster->GetName())
+}
+
+void ANotHaloPlayerCharacter::Assassination(ANotHaloPlayerCharacter* Caster)
+{
+	UE_LOG(NotHaloPlayerLogging, Display, TEXT("%s was assassinated by %s!"), *GetName(), *Caster->GetName())
 }
 
 //Health
@@ -293,8 +300,8 @@ void ANotHaloPlayerCharacter::SwitchWeapon()
 	PrimaryWeapon = SecondaryWeapon;
 	SecondaryWeapon = WeaponToSwitch;
 
-	RefreshPrimaryWeaponSocket();
-	RefreshSecondaryWeaponSocket();
+	RefreshPrimaryWeaponModel();
+	RefreshSecondaryWeaponModel();
 
 	UE_LOG(NotHaloPlayerLogging, Display, TEXT("Switched Weapon from %s to %s"), *SecondaryWeapon->GetWeaponName(), *PrimaryWeapon->GetWeaponName());
 	
@@ -315,17 +322,18 @@ void ANotHaloPlayerCharacter::PickUpNewWeapon(ANotHaloWeaponBase* NewWeapon)
 	PrimaryWeapon = NewWeapon;
 	PrimaryWeapon->SetWeaponHolderPawn(this);
 
-	RefreshPrimaryWeaponSocket();
+	RefreshPrimaryWeaponModel();
 	
 	//TODO Drop Weapon
 	
 	OnWeaponChanged.Broadcast();
 }
 
-void ANotHaloPlayerCharacter::RefreshPrimaryWeaponSocket()
+void ANotHaloPlayerCharacter::RefreshPrimaryWeaponModel()
 {
-	if (PrimaryWeaponSocket)
+	if (PrimaryWeapon && PrimaryWeaponSocket)
 	{
+		PrimaryWeapon->WeaponMesh->SetVisibility(true);
 		PrimaryWeaponSocket->AttachActor(PrimaryWeapon, PrimaryWeaponSocketMesh);
 	}
 	else
@@ -339,7 +347,7 @@ void ANotHaloPlayerCharacter::ChangePrimaryWeaponSocket(USkeletalMeshComponent* 
 	PrimaryWeaponSocketMesh = NewMesh;
 	PrimaryWeaponSocket = PrimaryWeaponSocketMesh->GetSocketByName(NewSocketName);
 	
-	if (PrimaryWeaponSocketMesh && PrimaryWeaponSocket)
+	if (PrimaryWeapon && PrimaryWeaponSocketMesh && PrimaryWeaponSocket)
 	{
 		PrimaryWeaponSocket->AttachActor(PrimaryWeapon, PrimaryWeaponSocketMesh);
 	}
@@ -349,11 +357,12 @@ void ANotHaloPlayerCharacter::ChangePrimaryWeaponSocket(USkeletalMeshComponent* 
 	}
 }
 
-void ANotHaloPlayerCharacter::RefreshSecondaryWeaponSocket()
+void ANotHaloPlayerCharacter::RefreshSecondaryWeaponModel()
 {
-	if (SecondaryWeaponSocket)
+	if (SecondaryWeapon && SecondaryWeaponSocketMesh && SecondaryWeaponSocket)
 	{
-		SecondaryWeaponSocket->AttachActor(SecondaryWeapon, GetMesh());
+		SecondaryWeapon->WeaponMesh->SetVisibility(GetLocalRole() != ROLE_Authority);
+		SecondaryWeaponSocket->AttachActor(SecondaryWeapon, SecondaryWeaponSocketMesh);
 	}
 	else
 	{
@@ -366,7 +375,7 @@ void ANotHaloPlayerCharacter::ChangeSecondaryWeaponSocket(USkeletalMeshComponent
 	SecondaryWeaponSocketMesh = NewMesh;
 	SecondaryWeaponSocket = SecondaryWeaponSocketMesh->GetSocketByName(NewSocketName);
 	
-	if (SecondaryWeaponSocketMesh && SecondaryWeaponSocket)
+	if (SecondaryWeapon && SecondaryWeaponSocketMesh && SecondaryWeaponSocket)
 	{
 		SecondaryWeaponSocket->AttachActor(SecondaryWeapon, SecondaryWeaponSocketMesh);
 	}
@@ -605,14 +614,65 @@ void ANotHaloPlayerCharacter::StartThrowGrenadeCooldown()
 	ThrowGrenadeCooldownRemaining = ThrowGrenadeCooldown;
 }
 
+//Melee
+void ANotHaloPlayerCharacter::PerformMelee()
+{
+	UE_LOG(NotHaloPlayerLogging, Display, TEXT("Melee"));
+
+	UWorld* World = GetWorld();
+
+	FVector PlayerForwardVector = PlayerCamera->GetForwardVector();
+
+	FVector StartPosition = PlayerCamera->GetComponentLocation();
+	FVector EndPosition = StartPosition + (PlayerForwardVector * MeleeRange);
+
+	World->DebugDrawTraceTag = FName(TEXT("MeleeTrace"));
+
+	FCollisionQueryParams MeleeTraceParams = FCollisionQueryParams(FName(TEXT("MeleeTrace")), true, this);
+	
+	FHitResult Hit;
+	World->LineTraceSingleByChannel(Hit, StartPosition, EndPosition, ECC_Camera, MeleeTraceParams);
+
+	if (Hit.bBlockingHit)
+	{
+		AActor* HitActor = Hit.GetActor();
+		
+		if (HitActor)
+		{
+			UE_LOG(NotHaloPlayerLogging, Display, TEXT("Hit!"));
+
+			ANotHaloPlayerCharacter* ValidPlayerCharacter = Cast<ANotHaloPlayerCharacter>(HitActor);
+
+			if (ValidPlayerCharacter)
+			{
+				float DotProduct = FVector::DotProduct(ValidPlayerCharacter->GetActorForwardVector().GetSafeNormal(),
+													   PlayerForwardVector.GetSafeNormal());
+
+				UE_LOG(NotHaloPlayerLogging, Display, TEXT("Dot Product: %f"), DotProduct);
+				
+				if (DotProduct >= ValidPlayerCharacter->AssassinationThreshold)
+				{
+					ValidPlayerCharacter->Assassination(this);
+				}
+				else
+				{
+					ValidPlayerCharacter->NotHaloApplyDamage(this, MeleeDamage);
+				}
+			}
+		}
+	}
+
+	OnMeleeHit.Broadcast(Hit);
+}
+
 //Teams & Scoring
 //Sets Player's current Team
-void ANotHaloPlayerCharacter::SetTeam(EPlayerTeam NewTeam)
+void ANotHaloPlayerCharacter::SetTeam(FNotHaloTeamData NewTeam)
 {
-	EPlayerTeam OldTeam = CurrentTeam;
+	FNotHaloTeamData OldTeam = CurrentTeam;
 	CurrentTeam = NewTeam;
 
-	OnTeamChanged.Broadcast(OldTeam, CurrentTeam, CurrentTeam == NewTeam);
+	OnTeamChanged.Broadcast(OldTeam, CurrentTeam, &CurrentTeam == &NewTeam);
 }
 
 //Sets Player's current Score

@@ -208,7 +208,7 @@ void ANotHaloPlayerController::HandleMelee()
 {
 	if (PlayerCharacter)
 	{
-		UE_LOG(NotHaloPlayerLogging, Display, TEXT("Melee"));
+		PlayerCharacter->PerformMelee();
 	}
 }
 

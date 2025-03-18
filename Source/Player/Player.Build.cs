@@ -10,7 +10,7 @@ public class Player : ModuleRules
             new string[]
             {
                 "Core", 
-                "Engine",
+                "Engine"
             }
         );
 
@@ -22,7 +22,8 @@ public class Player : ModuleRules
                 "Slate",
                 "SlateCore", 
                 "EnhancedInput", 
-                "Weapons"
+                "Weapons", 
+                "NotHaloShooterMechanics"
             }
         );
     }

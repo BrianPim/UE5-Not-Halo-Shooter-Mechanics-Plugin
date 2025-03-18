@@ -9,8 +9,17 @@
 /**
  * 
  */
-UCLASS()
-class NOTHALOSHOOTERMECHANICS_API UNotHaloTeamData : public UObject
+USTRUCT()
+struct NOTHALOSHOOTERMECHANICS_API FNotHaloTeamData
 {
-	GENERATED_BODY()
+public:
+	GENERATED_USTRUCT_BODY()
+	
+	UPROPERTY(EditDefaultsOnly)
+	FName TeamName = "BaseTeam";
+	UPROPERTY(EditDefaultsOnly)
+	FColor TeamColor = FColor::White;
+protected:
+private:
+
 };
