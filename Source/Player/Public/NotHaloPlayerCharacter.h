@@ -224,7 +224,10 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category = "Player|Teams & Scoring")
 	void AddDeaths(int DeltaDeaths);
-#pragma endregion 
+#pragma endregion
+
+	UFUNCTION(BlueprintCallable, Category = "Player|Mesh")
+	void RefreshPlayerModel();
 
 #pragma region Delegates
 	UPROPERTY(BlueprintAssignable, Category = "Player|Health & Shield")
@@ -279,7 +282,7 @@ private:
 	float BaseFOV;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Player|Camera", meta = (AllowPrivateAccess = "true"))
-	bool IsInFirstPersonCamera;
+	bool IsInFirstPersonCamera = false;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Player|Camera", meta = (AllowPrivateAccess = "true"))
 	TObjectPtr<USkeletalMeshComponent> FirstPersonArms;

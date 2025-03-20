@@ -32,8 +32,6 @@ void ANotHaloPlayerCharacter::BeginPlay()
 {
 	Super::BeginPlay();
 	
-	IsInFirstPersonCamera = IsLocallyControlled();
-	
 	BaseFOV = FirstPersonCamera->FieldOfView;
 
 	FirstPersonArmsWeaponSocket = FirstPersonArms->GetSocketByName(PrimaryWeaponSocketName);
@@ -112,6 +110,10 @@ void ANotHaloPlayerCharacter::PossessedBy(AController* NewController)
 //RPC - Sets up Enhanced Input for the client controlling this player
 void ANotHaloPlayerCharacter::CLIENT_HandlePossess_Implementation(AController* NewController)
 {
+	IsInFirstPersonCamera = IsLocallyControlled();
+
+	RefreshPlayerModel();
+	
 	if (!IsLocallyControlled()) return;
 
 	if (TObjectPtr<ANotHaloPlayerController> NotHaloController = Cast<ANotHaloPlayerController>(NewController))
@@ -443,8 +445,7 @@ void ANotHaloPlayerCharacter::RefreshPrimaryWeaponModel()
 		FirstPersonArmsWeaponSocket->AttachActor(PrimaryWeapon, FirstPersonArms);
 		ThirdPersonPrimaryWeaponSocket->AttachActor(ThirdPersonPrimaryWeapon, GetMesh());
 
-		GetMesh()->SetOwnerNoSee(IsInFirstPersonCamera);
-		FirstPersonArms->SetOnlyOwnerSee(IsInFirstPersonCamera);
+		RefreshPlayerModel();
 	}
 	else
 	{
@@ -797,3 +798,10 @@ void ANotHaloPlayerCharacter::AddDeaths(int DeltaDeaths)
 	Deaths += DeltaDeaths;
 }
 #pragma endregion
+
+//Mesh
+void ANotHaloPlayerCharacter::RefreshPlayerModel()
+{
+	GetMesh()->SetVisibility(!IsInFirstPersonCamera);
+	FirstPersonArms->SetVisibility(IsInFirstPersonCamera);
+}
