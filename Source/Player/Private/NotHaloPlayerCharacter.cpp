@@ -126,11 +126,6 @@ void ANotHaloPlayerCharacter::CLIENT_HandlePossess_Implementation(AController* N
 void ANotHaloPlayerCharacter::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
-
-	if (ThrowGrenadeCooldownRemaining > 0.0f)
-	{
-		ThrowGrenadeCooldownRemaining -= DeltaTime;
-	}
 }
 
 #pragma region Input & Movement
@@ -494,7 +489,7 @@ void ANotHaloPlayerCharacter::UseScope()
 
 	if (CurrentScopeLevel < PrimaryWeapon->GetNumOfScopedZoomStages())
 	{
-		FirstPersonCamera->SetFieldOfView(BaseFOV / PrimaryWeapon->GetZoomMultiplerAtIndex(CurrentScopeLevel));
+		FirstPersonCamera->SetFieldOfView(BaseFOV / PrimaryWeapon->GetZoomMultiplierAtIndex(CurrentScopeLevel));
 		CurrentScopeLevel++;
 	}
 	else
@@ -533,15 +528,21 @@ void ANotHaloPlayerCharacter::ThrowGrenade()
 		return;
 	}
 
-	if (ThrowGrenadeCooldownRemaining > 0.0f)
+	if (GrenadeMap[CurrentGrenade] == 0)
+	{
+		UE_LOG(NotHaloPlayerLogging, Warning, TEXT("Player has no more grenades!"))
+		return;
+	}
+
+	if (GrenadeCooldownActive)
 	{
 		UE_LOG(NotHaloPlayerLogging, Warning, TEXT("A Grenade cannot be thrown while it's on cooldown."));
 		return;
 	}
-
-	if (GrenadeMap[CurrentGrenade] == 0)
+	
+	if (!CanThrowGrenade)
 	{
-		UE_LOG(NotHaloPlayerLogging, Warning, TEXT("Player has no more grenades!"))
+		UE_LOG(NotHaloPlayerLogging, Warning, TEXT("CanThrowGrenade is false!"));
 		return;
 	}
 
@@ -565,8 +566,21 @@ void ANotHaloPlayerCharacter::ThrowGrenade()
 		UE_LOG(NotHaloPlayerLogging, Display, TEXT("Player has run out of %ss. Attempting to switch."), *CurrentGrenade->GetClass()->GetName())
 		SwitchGrenadeType();
 	}
-	
-	StartThrowGrenadeCooldown();
+
+	GrenadeCooldownActive = true;
+	GetWorld()->GetTimerManager().SetTimer(GrenadeCooldownTimerHandle, this, &ANotHaloPlayerCharacter::SetGrenadeCooldownComplete,
+											ThrowGrenadeCooldown, false);;
+}
+
+void ANotHaloPlayerCharacter::SetCanThrowGrenade(bool NewCanThrowGrenade)
+{
+	CanThrowGrenade = NewCanThrowGrenade;
+}
+
+void ANotHaloPlayerCharacter::SetGrenadeCooldownComplete()
+{
+	UE_LOG(NotHaloPlayerLogging, Display, TEXT("Grenade Cooldown complete!"));
+	GrenadeCooldownActive = false;
 }
 
 //Sets Current Grenade Type
@@ -697,15 +711,6 @@ void ANotHaloPlayerCharacter::SetThrowGrenadeCooldown(float NewCooldown)
 	ThrowGrenadeCooldown = FMath::Clamp(ThrowGrenadeCooldown, 0, BIG_NUMBER);
 }
 
-float ANotHaloPlayerCharacter::GetThrowGrenadeCooldownRemaining()
-{
-	return ThrowGrenadeCooldownRemaining;
-}
-
-void ANotHaloPlayerCharacter::StartThrowGrenadeCooldown()
-{
-	ThrowGrenadeCooldownRemaining = ThrowGrenadeCooldown;
-}
 #pragma endregion 
 
 //Melee

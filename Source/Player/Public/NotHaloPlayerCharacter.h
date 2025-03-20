@@ -160,6 +160,11 @@ public:
 #pragma region Public Grenades & Melee Functions
 	UFUNCTION(BlueprintCallable, Category = "Player|Grenades")
 	void ThrowGrenade();
+
+	UFUNCTION(BlueprintCallable, Category = "Player|Grenades")
+	void SetCanThrowGrenade(bool NewCanThrowGrenade);
+
+	void SetGrenadeCooldownComplete();
 	
 	UFUNCTION(BlueprintPure, Category = "Player|Grenades")
 	TSubclassOf<ANotHaloGrenade> GetCurrentGrenadeType();
@@ -182,14 +187,8 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Player|Grenades")
 	float GetThrowGrenadeCooldown();
 
-	UFUNCTION(BlueprintPure, Category = "Player|Grenades")
-	float GetThrowGrenadeCooldownRemaining();
-
 	UFUNCTION(BlueprintCallable, Category = "Player|Grenades")
 	void SetThrowGrenadeCooldown(float NewCooldown);
-
-	UFUNCTION(BlueprintCallable, Category = "Player|Grenades")
-	void StartThrowGrenadeCooldown();
 
 	//Max number of grenades that the Player can hold of a specific Type
 	UPROPERTY(EditAnywhere, Category = "Player|Grenades")
@@ -344,6 +343,7 @@ private:
 	TObjectPtr<ANotHaloDummyWeapon> ThirdPersonSecondaryWeapon = nullptr;
 
 	int CurrentScopeLevel = 0;
+
 #pragma endregion
 	
 #pragma region Private Grenade & Melee Variables
@@ -357,9 +357,12 @@ private:
 	static constexpr int BaseInitialGrenadeCount = 2; //TODO Handle this through engine
 	static constexpr float BaseThrowGrenadeCooldown = 1;
 	
-	float ThrowGrenadeCooldownRemaining = 0.0f;
-
 	TMap<TSubclassOf<ANotHaloGrenade>, int> GrenadeMap {};
+
+	FTimerHandle GrenadeCooldownTimerHandle;
+
+	bool CanThrowGrenade = true;
+	bool GrenadeCooldownActive = false;
 
 	//Melee
 	static constexpr float BaseMeleeRange = 150.0f;

@@ -101,8 +101,6 @@ private:
 	//Used to store reference to Hud
 	//UPROPERTY()
 	//TObjectPtr<AHudBB> PlayerHud = nullptr;
-
-	FTimerHandle CharacterInitializationTimerHandle;
 	
 	GENERATED_BODY()
 };

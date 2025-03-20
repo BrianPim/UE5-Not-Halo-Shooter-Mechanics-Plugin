@@ -7,7 +7,7 @@
 ANotHaloWeaponBase::ANotHaloWeaponBase()
 {
 	PrimaryActorTick.bCanEverTick = true;
-	PrimaryActorTick.TickInterval = .02f;
+	PrimaryActorTick.TickInterval = .01f;
 
 	WeaponMesh = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("Weapon Mesh"));
 	RootComponent = WeaponMesh;
@@ -24,34 +24,18 @@ void ANotHaloWeaponBase::BeginPlay()
 	CurrentReserveAmmoCount = MaxReserveAmmoCount;
 }
 
-// Called every .02 seconds
+// Called every .01 seconds
 void ANotHaloWeaponBase::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 
-	if (Reloading && HandleReloadWithDuration)
-	{
-		if (ReloadDurationRemaining > 0.0f)
-		{
-			ReloadDurationRemaining -= DeltaTime;
-		}
-		else
-		{
-			FinishReloadWeapon();
-		}
-	}
-
-	if (UseWeaponCooldownRemaining > 0.0f)
-	{
-		UseWeaponCooldownRemaining -= DeltaTime;
-	}
-	else if (FiringMode == EFiringMode::FullAuto && WeaponInUse)
+	if (FiringMode == EFiringMode::FullAuto && WeaponInUse && !WeaponCooldownIsActive)
 	{
 		//Setting this to false to guarantee UseWeapon() doesn't fire multiple times here
 		WeaponInUse = false;
 		UseWeapon();
 	}
-	else if (BurstFireQueue > 0)
+	else if (BurstFireQueue > 0 && !BurstFireCooldownIsActive)
 	{
 		UseWeapon();
 	}
@@ -65,8 +49,8 @@ void ANotHaloWeaponBase::UseWeapon()
 	if (!CanUseWeapon())
 		return;
 
-	//In case we interrupted reloading
-	Reloading = false;
+	//In case we interrupted WeaponReloadIsActive
+	WeaponReloadIsActive = false;
 	
 	//Burst Fire Mechanics
 	//------------------------------------------------------------------------------
@@ -79,10 +63,12 @@ void ANotHaloWeaponBase::UseWeapon()
 		
 		BurstFireQueue--;
 
-		if (BurstFireQueue >  0)
+		if (BurstFireQueue > 0)
 		{
 			WeaponInUse = true;
-			StartBurstFireCooldown();
+			BurstFireCooldownIsActive = true;
+			GetWorld()->GetTimerManager().SetTimer(BurstFireTimerHandle, this, &ANotHaloWeaponBase::EndBurstFireCooldown,
+												BurstFireTimeBetweenShots, false);
 		}
 		else
 		{
@@ -119,9 +105,9 @@ void ANotHaloWeaponBase::UseWeaponEnd()
 //Checks if weapon can be used
 bool ANotHaloWeaponBase::CanUseWeapon()
 {
-	if (UseWeaponCooldownRemaining > 0.0f)
+	if (WeaponCooldownIsActive)
 	{
-		UE_LOG(NotHaloWeaponsLogging, Warning, TEXT("%s cannot be used while it's on cooldown! Remaining: %f."), *WeaponName, UseWeaponCooldownRemaining);
+		UE_LOG(NotHaloWeaponsLogging, Warning, TEXT("%s cannot be used while it's on cooldown!"), *WeaponName);
 		return false;
 	}
 
@@ -133,7 +119,7 @@ bool ANotHaloWeaponBase::CanUseWeapon()
 		}
 		else
 		{
-			UE_LOG(NotHaloWeaponsLogging, Display, TEXT("%s has no ammo in the magazine. Reloading."), *WeaponName);
+			UE_LOG(NotHaloWeaponsLogging, Display, TEXT("%s has no ammo in the magazine. WeaponReloadIsActive."), *WeaponName);
 
 			StartReloadWeapon();
 		}
@@ -141,7 +127,7 @@ bool ANotHaloWeaponBase::CanUseWeapon()
 		return false;
 	}
 
-	if (Reloading && !AllowReloadCancel)
+	if (WeaponReloadIsActive && !AllowReloadCancel)
 	{
 		return false;
 	}
@@ -154,7 +140,7 @@ bool ANotHaloWeaponBase::CanUseWeapon()
 //Starts the reload process
 void ANotHaloWeaponBase::StartReloadWeapon()
 {
-	if (Reloading)
+	if (WeaponReloadIsActive)
 	{
 		UE_LOG(NotHaloWeaponsLogging, Warning, TEXT("%s is already in the middle of being reloaded."), *WeaponName);
 		return;
@@ -172,12 +158,14 @@ void ANotHaloWeaponBase::StartReloadWeapon()
 		return;
 	}
 
+	
 	if (HandleReloadWithDuration)
 	{
-		ReloadDurationRemaining = TimeToReload;
+		GetWorld()->GetTimerManager().SetTimer(ReloadTimerHandle, this, &ANotHaloWeaponBase::FinishReloadWeapon,
+												TimeToReload, false);
 	}
 
-	Reloading = true;
+	WeaponReloadIsActive = true;
 
 	UE_LOG(NotHaloWeaponsLogging, Display, TEXT("Starting Weapon Reload for %s."), *WeaponName);
 	
@@ -187,7 +175,7 @@ void ANotHaloWeaponBase::StartReloadWeapon()
 //Reload Weapon
 void ANotHaloWeaponBase::FinishReloadWeapon()
 {
-	Reloading = false;
+	WeaponReloadIsActive = false;
 	
 	UE_LOG(NotHaloWeaponsLogging, Display, TEXT("%s has been reloaded!"), *WeaponName);
 
@@ -242,12 +230,6 @@ float ANotHaloWeaponBase::GetCooldownDuration()
 	return UseWeaponCooldown;
 }
 
-//Returns the current duration remaining on the Weapon's Cooldown
-float ANotHaloWeaponBase::GetCooldownRemaining()
-{
-	return UseWeaponCooldownRemaining;
-}
-
 //Sets a custom duration for Weapon Cooldowns
 void ANotHaloWeaponBase::SetCooldownDuration(float NewCooldown)
 {
@@ -255,23 +237,23 @@ void ANotHaloWeaponBase::SetCooldownDuration(float NewCooldown)
 	UseWeaponCooldown = FMath::Clamp(UseWeaponCooldown, 0, BIG_NUMBER);
 }
 
-//Start Weapon Cooldown, cannot be used if Active Cooldown > 0
 void ANotHaloWeaponBase::StartCooldown()
 {
-	UseWeaponCooldownRemaining = UseWeaponCooldown;
+	WeaponCooldownIsActive = true;
+	GetWorld()->GetTimerManager().SetTimer(WeaponCooldownTimerHandle, this, &ANotHaloWeaponBase::EndCooldown,
+												UseWeaponCooldown, false);
 }
 
-//Start Weapon Cooldown, cannot be used if Active Cooldown > 0
-void ANotHaloWeaponBase::StartBurstFireCooldown()
+void ANotHaloWeaponBase::EndCooldown()
 {
-	UseWeaponCooldownRemaining = BurstFireTimeBetweenShots;
+	WeaponCooldownIsActive = false;
 }
 
-//Force Weapon Cooldown to finish
-void ANotHaloWeaponBase::ForceFinishCooldown()
+void ANotHaloWeaponBase::EndBurstFireCooldown()
 {
-	UseWeaponCooldownRemaining = 0;
+	BurstFireCooldownIsActive = false;
 }
+
 #pragma endregion
 
 #pragma region Other Functionality
@@ -302,7 +284,7 @@ EScopeType ANotHaloWeaponBase::GetScopeType()
 }
 
 //Returns the zoom multiplier at the provided zoom stage
-float ANotHaloWeaponBase::GetZoomMultiplerAtIndex(int Index)
+float ANotHaloWeaponBase::GetZoomMultiplierAtIndex(int Index)
 {
 	if (Index >= ScopedZoomStages.Num())
 	{

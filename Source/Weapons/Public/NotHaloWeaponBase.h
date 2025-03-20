@@ -68,20 +68,18 @@ public:
 
 	UFUNCTION(BlueprintPure, Category = "Weapon|Functionality")
 	float GetCooldownDuration();
-
-	UFUNCTION(BlueprintPure, Category = "Weapon|Functionality")
-	float GetCooldownRemaining();
-
+	
 	UFUNCTION(BlueprintCallable, Category = "Weapon|Functionality")
 	void SetCooldownDuration(float NewCooldown);
 
 	UFUNCTION(BlueprintCallable, Category = "Weapon|Functionality")
 	void StartCooldown();
 	
-	void StartBurstFireCooldown();
-
 	UFUNCTION(BlueprintCallable, Category = "Weapon|Functionality")
-	void ForceFinishCooldown();
+	void EndCooldown();
+
+	//TODO Potentially make this a private function
+	void EndBurstFireCooldown();
 
 	UFUNCTION(BlueprintPure, Category = "Weapon|Functionality")
 	float GetEffectiveRange();
@@ -96,7 +94,7 @@ public:
 	EScopeType GetScopeType();
 
 	UFUNCTION(BlueprintPure, Category = "Weapon|Functionality")
-	float GetZoomMultiplerAtIndex(int Index);
+	float GetZoomMultiplierAtIndex(int Index);
 
 	UFUNCTION(BlueprintPure, Category = "Weapon|Functionality")
 	int GetNumOfScopedZoomStages();
@@ -185,9 +183,6 @@ private:
 	//For Burst Fire weapons this time starts AFTER the burst is complete
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Weapon|Functionality", meta = (AllowPrivateAccess = "true"))
 	float UseWeaponCooldown = BaseUseWeaponCooldown;
-	
-	UPROPERTY(BlueprintReadOnly, Category = "Weapon|Functionality", meta = (AllowPrivateAccess = "true"))
-	float UseWeaponCooldownRemaining = 0.0f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Weapon|Functionality", meta = (AllowPrivateAccess = "true"))
 	bool HeadshotsAllowed = false;
@@ -206,8 +201,14 @@ private:
 
 	UPROPERTY(EditAnywhere, Category = "Weapon|Functionality", meta = (EditCondition = "FiringMode == EFiringMode::BurstFire"))
 	float BurstFireTimeBetweenShots = BaseBurstFireTimeBetweenShots;
+	
+	FTimerHandle WeaponCooldownTimerHandle;
+	FTimerHandle BurstFireTimerHandle;
 
-	float BurstFireCooldownRemaining = 0.0f;
+	UPROPERTY(BlueprintReadOnly, Category = "Weapon|Functionality", meta = (AllowPrivateAccess = "true"))
+	bool WeaponCooldownIsActive;
+	UPROPERTY(BlueprintReadOnly, Category = "Weapon|Functionality", meta = (AllowPrivateAccess = "true"))
+	bool BurstFireCooldownIsActive;
 	
 	//Reloading
 	static constexpr float BaseTimeToReload = 1.0f;
@@ -224,13 +225,15 @@ private:
 	
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Weapon|Reloading", meta = (AllowPrivateAccess = "HandleReloadWithDuration == true", EditCondition = "HandleReloadWithDuration == true"))
 	float TimeToReload = BaseTimeToReload;
-	
-	UPROPERTY(BlueprintReadOnly, Category = "Weapon|Reloading", meta = (AllowPrivateAccess = "HandleReloadWithDuration == true", EditCondition = "HandleReloadWithDuration == true"))
-	float ReloadDurationRemaining = 0.0f;
-	
+
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Weapon|Reloading", meta = (AllowPrivateAccess = "true"))
 	float EffectiveRange = BaseEffectiveRange;
 	
+	FTimerHandle ReloadTimerHandle;
+
+	UPROPERTY(BlueprintReadOnly, Category = "Weapon|Reloading", meta = (AllowPrivateAccess = "true"))
+	bool WeaponReloadIsActive;
+
 	//Ammo
 	static constexpr int BaseMaxReserveAmmoCount = 15;
 	static constexpr int BaseMaxMagazineAmmoCount = 5;
@@ -252,7 +255,6 @@ private:
 	//Set to 0 if not applicable
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Weapon|Ammo", meta = (AllowPrivateAccess = "true"))
 	int AmmoAddedPerReloadAnimLoop = BaseAmmoAddedPerReloadAnimLoop;
-	bool Reloading = false;
 	
 	GENERATED_BODY()
 };
