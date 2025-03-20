@@ -4,6 +4,7 @@
 #include "NotHaloPlayerCharacter.h"
 #include "NotHaloDummyWeapon.h"
 #include "NotHaloGrenade.h"
+#include "NotHaloPlayerController.h"
 #include "NotHaloPlayerLogging.h"
 #include "NotHaloTeamData.h"
 #include "NotHaloWeaponBase.h"
@@ -30,7 +31,7 @@ ANotHaloPlayerCharacter::ANotHaloPlayerCharacter()
 void ANotHaloPlayerCharacter::BeginPlay()
 {
 	Super::BeginPlay();
-
+	
 	IsInFirstPersonCamera = IsLocallyControlled();
 	
 	BaseFOV = FirstPersonCamera->FieldOfView;
@@ -98,6 +99,25 @@ void ANotHaloPlayerCharacter::BeginPlay()
 	}
 
 	OnWeaponsInitialized.Broadcast();
+}
+
+//PossessedBy only runs on the host
+void ANotHaloPlayerCharacter::PossessedBy(AController* NewController)
+{
+	Super::PossessedBy(NewController);
+
+	CLIENT_HandlePossess(NewController);
+}
+
+//RPC - Sets up Enhanced Input for the client controlling this player
+void ANotHaloPlayerCharacter::CLIENT_HandlePossess_Implementation(AController* NewController)
+{
+	if (!IsLocallyControlled()) return;
+
+	if (TObjectPtr<ANotHaloPlayerController> NotHaloController = Cast<ANotHaloPlayerController>(NewController))
+	{
+		NotHaloController->SetupEnhancedInput();
+	}
 }
 
 // Called every frame

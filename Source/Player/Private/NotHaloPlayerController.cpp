@@ -10,19 +10,30 @@
 void ANotHaloPlayerController::OnPossess(APawn* aPawn)
 {
 	Super::OnPossess(aPawn);
+}
 
+void ANotHaloPlayerController::OnUnPossess()
+{
+	//Unbind
+	if (EnhancedInputComponent)
+	{
+		EnhancedInputComponent->ClearActionBindings();
+	}
+
+	//Call parent method
+	Super::OnUnPossess();
+}
+
+void ANotHaloPlayerController::SetupEnhancedInput()
+{
 	//Store a reference to the Player's Pawn
-	PlayerCharacter = Cast<ANotHaloPlayerCharacter>(aPawn);
+	PlayerCharacter = Cast<ANotHaloPlayerCharacter>(GetPawn());
 	checkf(PlayerCharacter, TEXT("ANotHaloPlayerController derived classes should only possess ANotHaloPlayerCharacter derived pawns"));
-	
-	//Store a reference to the HUD
-	// PlayerHud = Cast<AHudBB>(GetHUD());
-	// checkf(PlayerHud, TEXT("Unable to get reference to Hud"));
 
 	//Get a reference to the EnhancedInputComponent
 	EnhancedInputComponent = Cast<UEnhancedInputComponent>(InputComponent);
 	checkf(EnhancedInputComponent, TEXT("Unable to get reference to the EnhancedInputComponent"));
-
+	
 	//Get local player subsystem
 	TObjectPtr<UEnhancedInputLocalPlayerSubsystem> InputSubsystem =
 		ULocalPlayer::GetSubsystem<UEnhancedInputLocalPlayerSubsystem>(GetLocalPlayer());
@@ -101,14 +112,7 @@ void ANotHaloPlayerController::OnPossess(APawn* aPawn)
 	}
 }
 
-void ANotHaloPlayerController::OnUnPossess()
-{
-	//Unbind
-	EnhancedInputComponent->ClearActionBindings();
 
-	//Call parent method
-	Super::OnUnPossess();
-}
 
 void ANotHaloPlayerController::HandleLook(const FInputActionValue& ActionValue)
 {

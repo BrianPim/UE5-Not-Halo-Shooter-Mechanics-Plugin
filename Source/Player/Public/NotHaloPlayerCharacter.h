@@ -7,7 +7,6 @@
 #include "NotHaloShooterMechanics/Public/NotHaloTeamData.h"
 #include "NotHaloPlayerCharacter.generated.h"
 
-
 //Forward Declarations
 class UInputComponent;
 class ANotHaloWeaponBase;
@@ -268,8 +267,12 @@ public:
 	
 protected:
 	virtual void BeginPlay() override;
+	virtual void PossessedBy(AController* NewController) override;
 
 private:
+	UFUNCTION(Client, Reliable)
+	void CLIENT_HandlePossess(AController* NewController);
+	
 	//Player Camera
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Player|Camera", meta = (AllowPrivateAccess = "true"))
 	TObjectPtr<UCameraComponent> FirstPersonCamera;

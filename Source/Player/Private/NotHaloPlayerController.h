@@ -7,14 +7,9 @@
 #include "EnhancedInputLibrary.h"
 #include "NotHaloPlayerController.generated.h"
 
-
-
 //Forward Declarations
 class ANotHaloPlayerCharacter;
 
-/**
- * 
- */
 UCLASS(Abstract)
 class PLAYER_API ANotHaloPlayerController : public APlayerController
 {
@@ -74,6 +69,9 @@ public:
 	//Input Mapping Context to use
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Player Input")
 	TObjectPtr<UInputMappingContext> InputMappingContext = nullptr;
+
+	void SetupEnhancedInput();
+
 protected:
 	virtual void OnPossess(APawn* aPawn) override;
 	virtual void OnUnPossess() override;
@@ -103,6 +101,8 @@ private:
 	//Used to store reference to Hud
 	//UPROPERTY()
 	//TObjectPtr<AHudBB> PlayerHud = nullptr;
+
+	FTimerHandle CharacterInitializationTimerHandle;
 	
 	GENERATED_BODY()
 };
