@@ -2,12 +2,12 @@
 
 
 #include "NotHaloPlayerCharacter.h"
+#include "NotHaloDummyWeapon.h"
 #include "NotHaloGrenade.h"
 #include "NotHaloPlayerLogging.h"
 #include "NotHaloTeamData.h"
 #include "NotHaloWeaponBase.h"
 #include "Camera/CameraComponent.h"
-#include "Chaos/Utilities.h"
 #include "Engine/SkeletalMeshSocket.h"
 
 // Sets default values
@@ -15,8 +15,15 @@ ANotHaloPlayerCharacter::ANotHaloPlayerCharacter()
 {
 	// Set this character to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = true;
-	PlayerCamera = CreateDefaultSubobject<UCameraComponent>(TEXT("Player Camera"));
-	PlayerCamera->AttachToComponent(RootComponent, FAttachmentTransformRules::KeepRelativeTransform);
+	
+	FirstPersonCamera = CreateDefaultSubobject<UCameraComponent>(TEXT("Player Camera"));
+	FirstPersonCamera->AttachToComponent(RootComponent, FAttachmentTransformRules::KeepRelativeTransform);
+	
+	FirstPersonArms = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("Player Arms"));
+	FirstPersonArms->AttachToComponent(FirstPersonCamera, FAttachmentTransformRules::KeepRelativeTransform);
+	FirstPersonArms->SetCastShadow(false);
+
+	GetMesh()->SetCastShadow(true);
 }
 
 // Called when the game starts or when spawned
@@ -24,20 +31,21 @@ void ANotHaloPlayerCharacter::BeginPlay()
 {
 	Super::BeginPlay();
 
-	BaseFOV = PlayerCamera->FieldOfView;
+	IsInFirstPersonCamera = IsLocallyControlled();
+	
+	BaseFOV = FirstPersonCamera->FieldOfView;
 
-	PrimaryWeaponSocketMesh = GetMesh();
-	SecondaryWeaponSocketMesh = GetMesh();
-	
-	PrimaryWeaponSocket = PrimaryWeaponSocketMesh ->GetSocketByName(PrimaryWeaponSocketName);
-	SecondaryWeaponSocket = SecondaryWeaponSocketMesh->GetSocketByName(SecondaryWeaponSocketName);
-	
+	FirstPersonArmsWeaponSocket = FirstPersonArms->GetSocketByName(PrimaryWeaponSocketName);
+	ThirdPersonPrimaryWeaponSocket = GetMesh()->GetSocketByName(PrimaryWeaponSocketName);
+	ThirdPersonSecondaryWeaponSocket = GetMesh()->GetSocketByName(SecondaryWeaponSocketName);
+
 	FActorSpawnParameters PlayerWeaponSpawnParams;
 	PlayerWeaponSpawnParams.Owner = this;
 	PlayerWeaponSpawnParams.Instigator = this;
 	PlayerWeaponSpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
 
 	//TODO Grenade shit
+	
 	//GrenadeSpawnSocket = GetMesh()->GetSocketByName(GrenadeSpawnSocketName);
 
 	//if (!GrenadeSpawnSocket)
@@ -50,6 +58,9 @@ void ANotHaloPlayerCharacter::BeginPlay()
 		PrimaryWeapon = GetWorld()->SpawnActor<ANotHaloWeaponBase>(InitialPrimaryWeapon, FVector::ZeroVector,
 															FRotator::ZeroRotator, PlayerWeaponSpawnParams);
 		PrimaryWeapon->SetWeaponHolderPawn(this);
+
+		ThirdPersonPrimaryWeapon = GetWorld()->SpawnActor<ANotHaloDummyWeapon>(FVector::ZeroVector,
+																FRotator::ZeroRotator, PlayerWeaponSpawnParams);
 		RefreshPrimaryWeaponModel();
 	}
 	else
@@ -62,6 +73,9 @@ void ANotHaloPlayerCharacter::BeginPlay()
 		SecondaryWeapon = GetWorld()->SpawnActor<ANotHaloWeaponBase>(InitialSecondaryWeapon, FVector::ZeroVector,
 																FRotator::ZeroRotator, PlayerWeaponSpawnParams);
 		SecondaryWeapon->SetWeaponHolderPawn(this);
+		
+		ThirdPersonSecondaryWeapon = GetWorld()->SpawnActor<ANotHaloDummyWeapon>(FVector::ZeroVector,
+																FRotator::ZeroRotator, PlayerWeaponSpawnParams);
 		RefreshSecondaryWeaponModel();
 	}
 	else
@@ -97,6 +111,7 @@ void ANotHaloPlayerCharacter::Tick(float DeltaTime)
 	}
 }
 
+#pragma region Input & Movement
 // Called to bind functionality to input
 void ANotHaloPlayerCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
 {
@@ -118,7 +133,15 @@ void ANotHaloPlayerCharacter::Crouch(bool bClientSimulation)
 	Super::Crouch(bClientSimulation);
 }
 
-//Damages the Player. Death is handled in UpdateHealth()
+bool ANotHaloPlayerCharacter::InputAllowed()
+{
+	return !IsDead;
+}
+
+#pragma endregion
+
+#pragma region Health & Shield
+
 void ANotHaloPlayerCharacter::NotHaloApplyDamage(ANotHaloPlayerCharacter* Caster, int Damage)
 {
 	if (CurrentHealth <= 0)
@@ -126,19 +149,24 @@ void ANotHaloPlayerCharacter::NotHaloApplyDamage(ANotHaloPlayerCharacter* Caster
 		UE_LOG(NotHaloPlayerLogging, Warning, TEXT("%s is already dead!"), *GetName())
 		return;
 	}
-	
+
+	int OldShield = CurrentShield;
+
 	if (CurrentShield > 0)
 	{
-		int OldShield = CurrentShield;
 		UpdateShield(-Damage);
+	}
 
-		int OverflowDamage = OldShield - Damage;
+	int OverflowDamage = OldShield - Damage;
 
-		if (OverflowDamage < 0)
-		{
-			int OldHealth = CurrentHealth;
-			UpdateHealth(OverflowDamage);
-		}
+	if (OverflowDamage < 0)
+	{
+		UpdateHealth(OverflowDamage);
+	}
+
+	if (CurrentHealth <= 0)
+	{
+		Kill(Caster);
 	}
 
 	UE_LOG(NotHaloPlayerLogging, Display, TEXT("%s took %d Damage from %s!"), *GetName(), Damage, *Caster->GetName())
@@ -146,7 +174,53 @@ void ANotHaloPlayerCharacter::NotHaloApplyDamage(ANotHaloPlayerCharacter* Caster
 
 void ANotHaloPlayerCharacter::Assassination(ANotHaloPlayerCharacter* Caster)
 {
+	Kill(Caster);
 	UE_LOG(NotHaloPlayerLogging, Display, TEXT("%s was assassinated by %s!"), *GetName(), *Caster->GetName())
+}
+
+void ANotHaloPlayerCharacter::Kill(ANotHaloPlayerCharacter* Caster)
+{
+	Die(false);
+	
+	UE_LOG(NotHaloPlayerLogging, Display, TEXT("%s was killed by %s!"), *GetName(), *Caster->GetName())
+
+	//First value is Killer, second value is the Victim
+	OnPlayerKilled.Broadcast(Caster, this);
+}
+
+void ANotHaloPlayerCharacter::Die(bool Suicide)
+{
+	OriginalMeshRelativeLocation = GetMesh()->GetRelativeLocation();
+	OriginalMeshRelativeRotation = GetMesh()->GetRelativeRotation();
+	
+	GetMesh()->SetCollisionProfileName(TEXT("Ragdoll"));
+	GetMesh()->SetSimulatePhysics(true);
+	
+	if (RespawnAfterDeath)
+	{
+		GetWorld()->GetTimerManager().SetTimer(RespawnTimerHandle, this, &ANotHaloPlayerCharacter::Respawn,
+											Suicide ? TimeToRespawnAfterSuicide : TimeToRespawnAfterKill, false);
+	}
+
+	IsDead = true;
+	
+	OnPlayerDied.Broadcast();
+}
+
+void ANotHaloPlayerCharacter::Respawn()
+{
+	GetMesh()->SetSimulatePhysics(false);
+	GetMesh()->SetCollisionProfileName(TEXT("CharacterMesh"));
+	GetMesh()->AttachToComponent(GetRootComponent(), FAttachmentTransformRules::SnapToTargetNotIncludingScale);
+	GetMesh()->SetRelativeLocationAndRotation(OriginalMeshRelativeLocation, OriginalMeshRelativeRotation);
+	
+	CurrentHealth = MaxHealth;
+	CurrentShield = MaxShield;
+	IsDead = false;
+
+	SetActorTransform(FTransform::Identity); //TODO set respawn position using game manager
+	
+	OnPlayerRespawned.Broadcast();
 }
 
 //Health
@@ -216,8 +290,9 @@ void ANotHaloPlayerCharacter::UpdateShield(int DeltaShield)
 		OnShieldChanged.Broadcast(OldValue, CurrentShield, MaxShield);
 	}
 }
+#pragma endregion 
 
-//Weapons
+#pragma region Weapons
 //Returns Primary Weapon
 ANotHaloWeaponBase* ANotHaloPlayerCharacter::GetPrimaryWeapon()
 {
@@ -331,57 +406,54 @@ void ANotHaloPlayerCharacter::PickUpNewWeapon(ANotHaloWeaponBase* NewWeapon)
 
 void ANotHaloPlayerCharacter::RefreshPrimaryWeaponModel()
 {
-	if (PrimaryWeapon && PrimaryWeaponSocket)
+	if (PrimaryWeapon && FirstPersonArmsWeaponSocket && ThirdPersonPrimaryWeaponSocket)
 	{
-		PrimaryWeapon->WeaponMesh->SetVisibility(true);
-		PrimaryWeaponSocket->AttachActor(PrimaryWeapon, PrimaryWeaponSocketMesh);
-	}
-	else
-	{
-		UE_LOG(NotHaloPlayerLogging, Error, TEXT("Unable to refresh Primary Weapon Socket!"))
-	}
-}
+		ThirdPersonPrimaryWeapon->WeaponMesh->SetSkeletalMeshAsset(PrimaryWeapon->WeaponMesh->GetSkeletalMeshAsset());
 
-void ANotHaloPlayerCharacter::ChangePrimaryWeaponSocket(USkeletalMeshComponent* NewMesh, FName NewSocketName)
-{
-	PrimaryWeaponSocketMesh = NewMesh;
-	PrimaryWeaponSocket = PrimaryWeaponSocketMesh->GetSocketByName(NewSocketName);
-	
-	if (PrimaryWeapon && PrimaryWeaponSocketMesh && PrimaryWeaponSocket)
-	{
-		PrimaryWeaponSocket->AttachActor(PrimaryWeapon, PrimaryWeaponSocketMesh);
+		int Index = 0;
+		for(UMaterialInterface* Material : PrimaryWeapon->WeaponMesh->GetMaterials())
+		{
+			ThirdPersonPrimaryWeapon->WeaponMesh->SetMaterial(Index, Material);
+			Index++;
+		}
+			
+		PrimaryWeapon->WeaponMesh->SetVisibility(IsInFirstPersonCamera);
+		ThirdPersonPrimaryWeapon->WeaponMesh->SetVisibility(!IsInFirstPersonCamera);
+		
+		FirstPersonArmsWeaponSocket->AttachActor(PrimaryWeapon, FirstPersonArms);
+		ThirdPersonPrimaryWeaponSocket->AttachActor(ThirdPersonPrimaryWeapon, GetMesh());
+
+		GetMesh()->SetOwnerNoSee(IsInFirstPersonCamera);
+		FirstPersonArms->SetOnlyOwnerSee(IsInFirstPersonCamera);
 	}
 	else
 	{
-		UE_LOG(NotHaloPlayerLogging, Error, TEXT("Unable to change Primary Weapon Socket!"))
+		UE_LOG(NotHaloPlayerLogging, Error, TEXT("Unable to refresh Primary Weapon!"))
 	}
 }
 
 void ANotHaloPlayerCharacter::RefreshSecondaryWeaponModel()
 {
-	if (SecondaryWeapon && SecondaryWeaponSocketMesh && SecondaryWeaponSocket)
+	if (SecondaryWeapon && FirstPersonArmsWeaponSocket && ThirdPersonSecondaryWeaponSocket)
 	{
-		SecondaryWeapon->WeaponMesh->SetVisibility(GetLocalRole() != ROLE_Authority);
-		SecondaryWeaponSocket->AttachActor(SecondaryWeapon, SecondaryWeaponSocketMesh);
-	}
-	else
-	{
-		UE_LOG(NotHaloPlayerLogging, Error, TEXT("Unable to refresh Secondary Weapon Socket!"))
-	}
-}
+		ThirdPersonSecondaryWeapon->WeaponMesh->SetSkeletalMeshAsset(SecondaryWeapon->WeaponMesh->GetSkeletalMeshAsset());
 
-void ANotHaloPlayerCharacter::ChangeSecondaryWeaponSocket(USkeletalMeshComponent* NewMesh, FName NewSocketName)
-{
-	SecondaryWeaponSocketMesh = NewMesh;
-	SecondaryWeaponSocket = SecondaryWeaponSocketMesh->GetSocketByName(NewSocketName);
-	
-	if (SecondaryWeapon && SecondaryWeaponSocketMesh && SecondaryWeaponSocket)
-	{
-		SecondaryWeaponSocket->AttachActor(SecondaryWeapon, SecondaryWeaponSocketMesh);
+		int Index = 0;
+		for(UMaterialInterface* Material : SecondaryWeapon->WeaponMesh->GetMaterials())
+		{
+			ThirdPersonSecondaryWeapon->WeaponMesh->SetMaterial(Index, Material);
+			Index++;
+		}
+		
+		SecondaryWeapon->WeaponMesh->SetVisibility(false);
+		ThirdPersonSecondaryWeapon->WeaponMesh->SetVisibility(!IsInFirstPersonCamera);
+		
+		FirstPersonArmsWeaponSocket->AttachActor(SecondaryWeapon, FirstPersonArms);
+		ThirdPersonSecondaryWeaponSocket->AttachActor(ThirdPersonSecondaryWeapon, GetMesh());
 	}
 	else
 	{
-		UE_LOG(NotHaloPlayerLogging, Error, TEXT("Unable to change Secondary Weapon Socket!"))
+		UE_LOG(NotHaloPlayerLogging, Error, TEXT("Unable to refresh Secondary Weapon!"))
 	}
 }
 
@@ -401,7 +473,7 @@ void ANotHaloPlayerCharacter::UseScope()
 
 	if (CurrentScopeLevel < PrimaryWeapon->GetNumOfScopedZoomStages())
 	{
-		PlayerCamera->SetFieldOfView(BaseFOV / PrimaryWeapon->GetZoomMultiplerAtIndex(CurrentScopeLevel));
+		FirstPersonCamera->SetFieldOfView(BaseFOV / PrimaryWeapon->GetZoomMultiplerAtIndex(CurrentScopeLevel));
 		CurrentScopeLevel++;
 	}
 	else
@@ -417,7 +489,7 @@ void ANotHaloPlayerCharacter::UseScopeCustomZoom(float CustomZoom)
 		UE_LOG(NotHaloPlayerLogging, Error, TEXT("Primary Weapon is null! Unable to SCOPE!"))
 	}
 
-	PlayerCamera->SetFieldOfView(BaseFOV / CustomZoom);
+	FirstPersonCamera->SetFieldOfView(BaseFOV / CustomZoom);
 
 	//If the player uses the zoom input again after a custom zoom is passed we want to return the FOV to its base state
 	CurrentScopeLevel = 10000; 
@@ -425,12 +497,12 @@ void ANotHaloPlayerCharacter::UseScopeCustomZoom(float CustomZoom)
 
 void ANotHaloPlayerCharacter::UnScope()
 {
-	PlayerCamera->SetFieldOfView(BaseFOV);
+	FirstPersonCamera->SetFieldOfView(BaseFOV);
 	CurrentScopeLevel = 0;
 }
+#pragma endregion 
 
-
-//GrenadeTypes
+#pragma region Grenades
 //Throws Grenade
 void ANotHaloPlayerCharacter::ThrowGrenade()
 {
@@ -613,6 +685,7 @@ void ANotHaloPlayerCharacter::StartThrowGrenadeCooldown()
 {
 	ThrowGrenadeCooldownRemaining = ThrowGrenadeCooldown;
 }
+#pragma endregion 
 
 //Melee
 void ANotHaloPlayerCharacter::PerformMelee()
@@ -621,9 +694,9 @@ void ANotHaloPlayerCharacter::PerformMelee()
 
 	UWorld* World = GetWorld();
 
-	FVector PlayerForwardVector = PlayerCamera->GetForwardVector();
+	FVector PlayerForwardVector = FirstPersonCamera->GetForwardVector();
 
-	FVector StartPosition = PlayerCamera->GetComponentLocation();
+	FVector StartPosition = FirstPersonCamera->GetComponentLocation();
 	FVector EndPosition = StartPosition + (PlayerForwardVector * MeleeRange);
 
 	World->DebugDrawTraceTag = FName(TEXT("MeleeTrace"));
@@ -641,9 +714,7 @@ void ANotHaloPlayerCharacter::PerformMelee()
 		{
 			UE_LOG(NotHaloPlayerLogging, Display, TEXT("Hit!"));
 
-			ANotHaloPlayerCharacter* ValidPlayerCharacter = Cast<ANotHaloPlayerCharacter>(HitActor);
-
-			if (ValidPlayerCharacter)
+			if (ANotHaloPlayerCharacter* ValidPlayerCharacter = Cast<ANotHaloPlayerCharacter>(HitActor))
 			{
 				float DotProduct = FVector::DotProduct(ValidPlayerCharacter->GetActorForwardVector().GetSafeNormal(),
 													   PlayerForwardVector.GetSafeNormal());
@@ -665,7 +736,7 @@ void ANotHaloPlayerCharacter::PerformMelee()
 	OnMeleeHit.Broadcast(Hit);
 }
 
-//Teams & Scoring
+#pragma region Teams & Scoring
 //Sets Player's current Team
 void ANotHaloPlayerCharacter::SetTeam(FNotHaloTeamData NewTeam)
 {
@@ -676,6 +747,13 @@ void ANotHaloPlayerCharacter::SetTeam(FNotHaloTeamData NewTeam)
 }
 
 //Sets Player's current Score
+int ANotHaloPlayerCharacter::GetScore()
+{
+	return CurrentScore;
+}
+
+
+//Sets Player's current Score
 void ANotHaloPlayerCharacter::SetScore(int DeltaScore)
 {
 	int OldScore = CurrentScore;
@@ -684,8 +762,18 @@ void ANotHaloPlayerCharacter::SetScore(int DeltaScore)
 	OnScoreChanged.Broadcast(OldScore, CurrentScore, CurrentScore == OldScore + DeltaScore);
 }
 
+void ANotHaloPlayerCharacter::AddKills(int DeltaKills)
+{
+	Kills += DeltaKills;
+}
 
+void ANotHaloPlayerCharacter::AddAssists(int DeltaAssists)
+{
+	Assists += DeltaAssists;
+}
 
-
-
-
+void ANotHaloPlayerCharacter::AddDeaths(int DeltaDeaths)
+{
+	Deaths += DeltaDeaths;
+}
+#pragma endregion

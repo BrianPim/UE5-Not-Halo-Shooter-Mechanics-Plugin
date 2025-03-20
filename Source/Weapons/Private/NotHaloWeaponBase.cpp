@@ -11,6 +11,8 @@ ANotHaloWeaponBase::ANotHaloWeaponBase()
 
 	WeaponMesh = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("Weapon Mesh"));
 	RootComponent = WeaponMesh;
+
+	WeaponMesh->SetCastShadow(false);
 }
 
 // Called when the game starts or when spawned

@@ -29,6 +29,11 @@ void ANotHaloProjectile::Tick(float DeltaTime)
 	Super::Tick(DeltaTime);
 }
 
+void ANotHaloProjectile::SetParentWeapon(ANotHaloWeaponBase* Weapon)
+{
+	ParentWeapon = Weapon;
+}
+
 //Damage
 //Returns Damage
 int ANotHaloProjectile::GetDamage()

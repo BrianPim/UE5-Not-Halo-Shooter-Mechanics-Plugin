@@ -11,10 +11,11 @@
 //Forward Declarations
 class UInputComponent;
 class ANotHaloWeaponBase;
+class ANotHaloDummyWeapon;
 class ANotHaloGrenade;
 class UCameraComponent;
 
-//Delegate Declarations
+#pragma region Delegate Declarations
 //Delegate for integer stats are changed
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FCharacterIntStatUpdated,
 												int32, OldValue,
@@ -49,7 +50,7 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FPlayerInteraction,
 												ANotHaloPlayerCharacter*, OtherPlayer);
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FPlayerCastHit, FHitResult, Hit);
-
+#pragma endregion 
 
 UCLASS(Abstract)
 class PLAYER_API ANotHaloPlayerCharacter : public ACharacter
@@ -58,16 +59,22 @@ public:
 	// Sets default values for this character's properties
 	ANotHaloPlayerCharacter();
 
+	//General Input
+	virtual void SetupPlayerInputComponent(UInputComponent* PlayerInputComponent) override;
+
+	UFUNCTION(BlueprintPure, Category = "Player|Input")
+	bool InputAllowed();
+
 	//Movement
 	virtual void AddMovementInput(FVector WorldDirection, float ScaleValue = 1, bool bForce = false) override;
 	virtual void Jump() override;
 	virtual void Crouch(bool bClientSimulation = false) override;
 	virtual void Tick(float DeltaTime) override;
-	virtual void SetupPlayerInputComponent(UInputComponent* PlayerInputComponent) override;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Player|Movement")
 	float WalkSpeed = 400.0f;
 	
+#pragma region Public Health & Shield Functions
 	//Apply Damage
 	UFUNCTION(BlueprintCallable, Category = "Player|Health & Shield")
 	void NotHaloApplyDamage(ANotHaloPlayerCharacter* Caster, int Damage);
@@ -75,6 +82,16 @@ public:
 	//Insta-kill
 	UFUNCTION(BlueprintCallable, Category = "Player|Health & Shield")
 	void Assassination(ANotHaloPlayerCharacter* Caster);
+
+	//Records kill data and then handles the rest through Die()
+	UFUNCTION(BlueprintCallable, Category = "Player|Health & Shield")
+	void Kill(ANotHaloPlayerCharacter* Caster);
+
+	UFUNCTION(BlueprintCallable, Category = "Player|Health & Shield")
+	void Die(bool Suicide);
+	
+	UFUNCTION(BlueprintCallable, Category = "Player|Health & Shield")
+	void Respawn();
 
 	//Health
 	UFUNCTION(BlueprintPure, Category = "Player|Health & Shield")
@@ -95,17 +112,9 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category = "Player|Health & Shield")
 	void UpdateShield(int DeltaShield);
-
-	//Weapons
+#pragma endregion
 	
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Player|Weapons")
-	FName PrimaryWeaponSocketName;
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Player|Weapons")
-	FName SecondaryWeaponSocketName;
-
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Player|Weapons")
-	FName RightHandBoneName;
-	
+#pragma region Public Weapon Functions
 	UFUNCTION(BlueprintPure, Category = "Player|Weapons")
 	ANotHaloWeaponBase* GetPrimaryWeapon();
 
@@ -125,18 +134,12 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category = "Player|Weapons")
 	void PickUpNewWeapon(ANotHaloWeaponBase* NewWeapon);
-
+	
 	UFUNCTION(BlueprintCallable, Category = "Player|Weapons")
 	void RefreshPrimaryWeaponModel();
 
 	UFUNCTION(BlueprintCallable, Category = "Player|Weapons")
-	void ChangePrimaryWeaponSocket(USkeletalMeshComponent* NewMesh, FName NewSocketName);
-
-	UFUNCTION(BlueprintCallable, Category = "Player|Weapons")
 	void RefreshSecondaryWeaponModel();
-
-	UFUNCTION(BlueprintCallable, Category = "Player|Weapons")
-	void ChangeSecondaryWeaponSocket(USkeletalMeshComponent* NewMesh, FName NewSocketName);
 
 	UFUNCTION(BlueprintCallable, Category = "Player|Weapons")
 	void UseScope();
@@ -146,18 +149,16 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category = "Player|Weapons")
 	void UnScope();
-
-	UPROPERTY(BlueprintReadOnly)
-	USkeletalMeshComponent* PrimaryWeaponSocketMesh = nullptr;
-	UPROPERTY(BlueprintReadOnly)
-	USkeletalMeshComponent* SecondaryWeaponSocketMesh = nullptr;
 	
-	UPROPERTY(BlueprintReadWrite, Category = "Player|Weapons")
-	const USkeletalMeshSocket* PrimaryWeaponSocket = nullptr;
-	UPROPERTY(BlueprintReadWrite, Category = "Player|Weapons")
-	const USkeletalMeshSocket* SecondaryWeaponSocket = nullptr;
+	UPROPERTY(BlueprintReadOnly, Category = "Player|Weapons")
+	const USkeletalMeshSocket* FirstPersonArmsWeaponSocket = nullptr;
+	UPROPERTY(BlueprintReadOnly, Category = "Player|Weapons")
+	const USkeletalMeshSocket* ThirdPersonPrimaryWeaponSocket = nullptr;
+	UPROPERTY(BlueprintReadOnly, Category = "Player|Weapons")
+	const USkeletalMeshSocket* ThirdPersonSecondaryWeaponSocket = nullptr;
+#pragma endregion
 
-	//Grenades
+#pragma region Public Grenades & Melee Functions
 	UFUNCTION(BlueprintCallable, Category = "Player|Grenades")
 	void ThrowGrenade();
 	
@@ -203,14 +204,30 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Player|Melee")
 	void PerformMelee();
 
-	//Teams & Scoring
+#pragma endregion
+
+#pragma region Public Teams & Scoring Functions
+	
 	UFUNCTION()
 	void SetTeam(FNotHaloTeamData NewTeam);
+
+	UFUNCTION(BlueprintPure, Category = "Player|Teams & Scoring")
+	int GetScore();
 
 	UFUNCTION(BlueprintCallable, Category = "Player|Teams & Scoring")
 	void SetScore(int DeltaScore);
 
-	//Delegates
+	UFUNCTION(BlueprintCallable, Category = "Player|Teams & Scoring")
+	void AddKills(int DeltaKills);
+
+	UFUNCTION(BlueprintCallable, Category = "Player|Teams & Scoring")
+	void AddAssists(int DeltaAssists);
+
+	UFUNCTION(BlueprintCallable, Category = "Player|Teams & Scoring")
+	void AddDeaths(int DeltaDeaths);
+#pragma endregion 
+
+#pragma region Delegates
 	UPROPERTY(BlueprintAssignable, Category = "Player|Health & Shield")
 	FCharacterIntStatUpdated OnHealthChanged;
 
@@ -219,6 +236,13 @@ public:
 	
 	UPROPERTY(BlueprintAssignable, Category = "Player|Health & Shield")
 	FPlayerUpdate OnPlayerDied;
+
+	UPROPERTY(BlueprintAssignable, Category = "Player|Health & Shield")
+	FPlayerUpdate OnPlayerRespawned;
+
+	//First value is Killer, second value is the Victim
+	UPROPERTY(BlueprintAssignable, Category = "Player|Health & Shield")
+	FPlayerInteraction OnPlayerKilled;
 
 	UPROPERTY(BlueprintAssignable, Category = "Player|Weapons")
 	FPlayerUpdate OnWeaponsInitialized;
@@ -240,28 +264,65 @@ public:
 
 	UPROPERTY(BlueprintAssignable, Category = "Player|Teams & Scoring")
 	FCharacterIntStatUpdated OnScoreChanged;
-
+#pragma endregion
+	
 protected:
 	virtual void BeginPlay() override;
 
 private:
 	//Player Camera
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Player|Camera", meta = (AllowPrivateAccess = "true"))
-	TObjectPtr<UCameraComponent> PlayerCamera;
+	TObjectPtr<UCameraComponent> FirstPersonCamera;
 	float BaseFOV;
-	
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Player|Camera", meta = (AllowPrivateAccess = "true"))
+	bool IsInFirstPersonCamera;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Player|Camera", meta = (AllowPrivateAccess = "true"))
+	TObjectPtr<USkeletalMeshComponent> FirstPersonArms;
+
+#pragma region Private Health & Shield Variables
 	//Health
 	static constexpr int BaseMaxHealthValue = 100;
 	int MaxHealth = BaseMaxHealthValue;
 	int CurrentHealth = BaseMaxHealthValue;
+
+	UPROPERTY(BlueprintReadOnly, Category = "Player|Health & Shield", meta = (AllowPrivateAccess = "true"))
+	bool RespawnAfterDeath = true;
+	bool IsDead = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Player|Health & Shield", meta = (AllowPrivateAccess = "true"))
+	FName HeadshotBoneName;
 
 	//Shield
 	static constexpr int BaseMaxShieldValue = 100;
 	int MaxShield = BaseMaxShieldValue;
 	int CurrentShield = BaseMaxShieldValue;
 
-	//Weapons
+	//Respawn
+	static constexpr float BaseTimeToRespawnAfterKill = 5.0f;
+	static constexpr float BaseTimeToRespawnAfterSuicide = 7.0f;
+	
+	UPROPERTY(BlueprintReadOnly, Category = "Player|Health & Shield", meta = (AllowPrivateAccess = "true"))
+	float TimeToRespawnAfterKill = BaseTimeToRespawnAfterKill;
+	UPROPERTY(BlueprintReadOnly, Category = "Player|Health & Shield", meta = (AllowPrivateAccess = "true"))
+	float TimeToRespawnAfterSuicide = BaseTimeToRespawnAfterSuicide;
 
+	FVector OriginalMeshRelativeLocation;
+	FRotator OriginalMeshRelativeRotation;
+
+	FTimerHandle RespawnTimerHandle;
+#pragma endregion
+	
+#pragma region Private Weapon Variables
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Player|Weapons", meta = (AllowPrivateAccess = "true"))
+	FName FirstPersonWeaponSocketName;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Player|Weapons", meta = (AllowPrivateAccess = "true"))
+	FName PrimaryWeaponSocketName;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Player|Weapons", meta = (AllowPrivateAccess = "true"))
+	FName SecondaryWeaponSocketName;
+	
 	//Player's initial Primary Weapon
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Player|Weapons", meta = (AllowPrivateAccess = "true"))
 	TSubclassOf<ANotHaloWeaponBase> InitialPrimaryWeapon = nullptr;
@@ -271,9 +332,15 @@ private:
 	TSubclassOf<ANotHaloWeaponBase> InitialSecondaryWeapon = nullptr; //TODO Handle Initial Weapon via Game Mode
 	TObjectPtr<ANotHaloWeaponBase> SecondaryWeapon = nullptr;
 
+	UPROPERTY()
+	TObjectPtr<ANotHaloDummyWeapon> ThirdPersonPrimaryWeapon = nullptr;
+	UPROPERTY()
+	TObjectPtr<ANotHaloDummyWeapon> ThirdPersonSecondaryWeapon = nullptr;
+
 	int CurrentScopeLevel = 0;
+#pragma endregion
 	
-	//Grenades
+#pragma region Private Grenade & Melee Variables
 	TSubclassOf<ANotHaloGrenade> CurrentGrenade = nullptr;
 
 	//Grenade Types that the Player can use
@@ -291,12 +358,15 @@ private:
 	//Melee
 	static constexpr float BaseMeleeRange = 150.0f;
 	static constexpr float BaseMeleeDamage = 100.0f;
+	static constexpr float BaseMeleeForce = 100.0f;
 	static constexpr float BaseAssassinationThreshold = 0.5f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Player|Melee", meta = (AllowPrivateAccess = "true"))
 	float MeleeRange = BaseMeleeRange;
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Player|Melee", meta = (AllowPrivateAccess = "true"))
 	float MeleeDamage = BaseMeleeDamage;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Player|Melee", meta = (AllowPrivateAccess = "true"))
+	float MeleeForce = BaseMeleeForce;
 
 	// Between -1 and 1.
 	// 1 = Melee directly behind other player
@@ -304,13 +374,24 @@ private:
 	// If set to -1, all melee attacks will be assassinations (instant-kills)
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Player|Melee", meta = (AllowPrivateAccess = "true"))
 	float AssassinationThreshold = BaseAssassinationThreshold;
+#pragma endregion
 	
-	//Teams & Scoring
+#pragma region Private Teams & Scoring Variables
+	static constexpr int BaseDefaultScore = 0;
+	static constexpr int BaseKills = 0;
+	static constexpr int BaseAssists = 0;
+	static constexpr int BaseDeaths = 0;
+
+	UPROPERTY(BlueprintReadOnly, Category = "Player|Teams & Scoring", meta = (AllowPrivateAccess = "true"))
+	int Kills = BaseKills;
+	UPROPERTY(BlueprintReadOnly, Category = "Player|Teams & Scoring", meta = (AllowPrivateAccess = "true"))
+	int Assists = BaseAssists;
+	UPROPERTY(BlueprintReadOnly, Category = "Player|Teams & Scoring", meta = (AllowPrivateAccess = "true"))
+	int Deaths = BaseDeaths;
 
 	UPROPERTY(EditAnywhere, Category = "Player|Teams & Scoring", meta = (AllowPrivateAccess = "true"))
 	FNotHaloTeamData CurrentTeam;
 
-	static constexpr int BaseDefaultScore = 0;
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Player|Teams & Scoring", meta = (AllowPrivateAccess = "true"))
 	int CurrentScore = BaseDefaultScore;
 
@@ -320,6 +401,7 @@ private:
 	
 	UPROPERTY(BlueprintReadOnly, Category = "Player|Mesh", meta = (AllowPrivateAccess = "true"))
 	const USkeletalMeshSocket* GrenadeSpawnSocket = nullptr;
+#pragma endregion
 	
 	GENERATED_BODY()
 };

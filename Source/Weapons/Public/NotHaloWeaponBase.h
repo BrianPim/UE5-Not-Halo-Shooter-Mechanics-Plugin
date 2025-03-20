@@ -39,7 +39,7 @@ public:
 	ANotHaloWeaponBase();
 	
 	virtual void Tick(float DeltaTime) override;
-
+	
 	//Weapon Functionality
 	
 	UFUNCTION(BlueprintCallable, Category = "Weapon|Functionality")
@@ -122,7 +122,7 @@ public:
 
 	//Mesh
 
-	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Weapon|Mesh")
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Weapon|Mesh")
 	TObjectPtr<USkeletalMeshComponent> WeaponMesh;
 
 	//Util
@@ -188,6 +188,9 @@ private:
 	
 	UPROPERTY(BlueprintReadOnly, Category = "Weapon|Functionality", meta = (AllowPrivateAccess = "true"))
 	float UseWeaponCooldownRemaining = 0.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Weapon|Functionality", meta = (AllowPrivateAccess = "true"))
+	bool HeadshotsAllowed = false;
 
 	UPROPERTY(EditAnywhere, Category = "Weapon|Functionality", meta = (AllowPrivateAccess = "true"))
 	EScopeType ScopeType = BaseScopeType;

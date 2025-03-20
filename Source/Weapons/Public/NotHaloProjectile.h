@@ -3,6 +3,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "NotHaloWeaponBase.h"
 #include "GameFramework/Actor.h"
 #include "NotHaloProjectile.generated.h"
 
@@ -25,6 +26,9 @@ public:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
 	TObjectPtr<UProjectileMovementComponent> ProjectileMovementComponent;
 
+	UFUNCTION(BlueprintCallable, Category = "Projectile")
+	void SetParentWeapon(ANotHaloWeaponBase* Weapon);
+
 	int GetDamage();
 	void SetDamage(int NewDamage);
 	FVector GetProjectileDirection();
@@ -35,10 +39,14 @@ protected:
 	virtual void BeginPlay() override;
 
 private:
+	//Weapon
+	UPROPERTY(BlueprintReadOnly, Category = "Projectile", meta = (AllowPrivateAccess = "true"))
+	TObjectPtr<ANotHaloWeaponBase> ParentWeapon;
+	
 	//Damage
 	static constexpr int BaseDamage = 10;
 	
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Projectile|Damage", meta = (AllowPrivateAccess = "true"))
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Projectile", meta = (AllowPrivateAccess = "true"))
 	int Damage;
 	
 	GENERATED_BODY()
