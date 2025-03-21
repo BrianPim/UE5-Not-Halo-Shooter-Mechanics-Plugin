@@ -284,6 +284,8 @@ void ANotHaloPlayerCharacter::SERVER_SetInitialWeapons_Implementation()
 //Multicast RPC - Host sends initial weapon data from the Game Mode to be replicated on all instances
 void ANotHaloPlayerCharacter::MULTICAST_SetInitialWeapons_Implementation(TSubclassOf<ANotHaloWeaponBase> NewInitialPrimaryWeapon, TSubclassOf<ANotHaloWeaponBase> NewInitialSecondaryWeapon)
 {
+	checkf(GetPlayerState(), TEXT("Failed to find Player State!"));
+	
 	NotHaloPlayerState = Cast<ANotHaloPlayerState>(GetPlayerState());
 
 	checkf(NotHaloPlayerState, TEXT("Failed to cast Player State to ANotHaloPlayerState!"));
