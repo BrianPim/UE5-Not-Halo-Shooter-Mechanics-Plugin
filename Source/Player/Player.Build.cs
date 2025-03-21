@@ -10,7 +10,8 @@ public class Player : ModuleRules
             new string[]
             {
                 "Core", 
-                "Engine"
+                "Engine",
+                "NotHaloShooterMechanics"
             }
         );
 

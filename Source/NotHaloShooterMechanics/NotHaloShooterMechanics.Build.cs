@@ -37,7 +37,8 @@ public class NotHaloShooterMechanics : ModuleRules
 				"CoreUObject",
 				"Engine",
 				"Slate",
-				"SlateCore",
+				"SlateCore", 
+				"Weapons",
 				// ... add private dependencies that you statically link with here ...	
 			}
 			);

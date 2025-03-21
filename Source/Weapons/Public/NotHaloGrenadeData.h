@@ -3,22 +3,25 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "NotHaloGrenade.h"
 #include "UObject/Object.h"
-#include "NotHaloTeamData.generated.h"
+#include "NotHaloGrenadeData.generated.h"
 
 /**
  * 
  */
 USTRUCT(BlueprintType)
-struct NOTHALOSHOOTERMECHANICS_API FNotHaloTeamData
+struct WEAPONS_API FNotHaloGrenadeData
 {
 public:
 	GENERATED_USTRUCT_BODY()
 	
 	UPROPERTY(EditDefaultsOnly)
-	FName TeamName = "BaseTeam";
+	TSubclassOf<ANotHaloGrenade> GrenadeType;
 	UPROPERTY(EditDefaultsOnly)
-	FColor TeamColor = FColor::White;
+	int MaxGrenadeCount = 2;
+	UPROPERTY(EditDefaultsOnly)
+	int StartingGrenadeCount = 2;
 protected:
 private:
 

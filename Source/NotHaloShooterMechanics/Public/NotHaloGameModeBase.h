@@ -4,25 +4,31 @@
 
 #include "CoreMinimal.h"
 #include "NotHaloTeamData.h"
+#include "NotHaloGrenadeData.h"
+#include "NotHaloWeaponBase.h"
 #include "GameFramework/GameModeBase.h"
 #include "NotHaloGameModeBase.generated.h"
 
-/**
- * 
- */
 UCLASS(Abstract)
 class NOTHALOSHOOTERMECHANICS_API ANotHaloGameModeBase : public AGameModeBase
 {
 public:
-protected:
-private:
 	UPROPERTY(EditAnywhere)
 	TArray<FNotHaloTeamData> Teams = {};
 
-	static constexpr bool BaseAssassinationsAllowed = true;
+	UPROPERTY(EditAnywhere)
+	TSubclassOf<ANotHaloWeaponBase> InitialPrimaryWeapon = nullptr;
+	UPROPERTY(EditAnywhere)
+	TSubclassOf<ANotHaloWeaponBase> InitialSecondaryWeapon = nullptr;
+	
+	UPROPERTY(EditAnywhere)
+	TArray<FNotHaloGrenadeData> Grenades = {};
 
 	UPROPERTY(EditAnywhere)
 	bool AssassinationsAllowed = BaseAssassinationsAllowed;
-	
+protected:
+private:
+	static constexpr bool BaseAssassinationsAllowed = true;
+
 	GENERATED_BODY()
 };

@@ -3,15 +3,18 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "NotHaloPlayerState.h"
+#include "NotHaloTeamData.h"
 #include "GameFramework/Character.h"
-#include "NotHaloShooterMechanics/Public/NotHaloTeamData.h"
 #include "NotHaloPlayerCharacter.generated.h"
 
+struct FNotHaloGrenadeData;
 //Forward Declarations
 class UInputComponent;
 class ANotHaloWeaponBase;
 class ANotHaloDummyWeapon;
 class ANotHaloGrenade;
+class ANotHaloGameModeBase;
 class UCameraComponent;
 
 #pragma region Delegate Declarations
@@ -32,10 +35,9 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE(FPlayerUpdate);
 
 
 //Delegate for team change
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FTeamUpdated,
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FTeamUpdated,
 												FNotHaloTeamData, OldValue,
-												FNotHaloTeamData, NewValue,
-												bool, Success);
+												FNotHaloTeamData, NewValue);
 
 //Delegate for score change
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FScoreUpdated,
@@ -252,6 +254,9 @@ public:
 	FPlayerUpdate OnWeaponChanged;
 
 	UPROPERTY(BlueprintAssignable, Category = "Player|Grenades")
+	FPlayerUpdate OnGrenadesInitialized;
+
+	UPROPERTY(BlueprintAssignable, Category = "Player|Grenades")
 	FPlayerUpdate OnGrenadeTypeChanged;
 
 	UPROPERTY(BlueprintAssignable, Category = "Player|Melee")
@@ -270,8 +275,14 @@ public:
 protected:
 	virtual void BeginPlay() override;
 	virtual void PossessedBy(AController* NewController) override;
+	virtual void OnRep_PlayerState() override;
 
 private:
+	UPROPERTY()
+	TObjectPtr<ANotHaloGameModeBase> GameMode;
+	UPROPERTY()
+	TObjectPtr<ANotHaloPlayerState> NotHaloPlayerState;
+	
 	UFUNCTION(Client, Reliable)
 	void CLIENT_HandlePossess(AController* NewController);
 	
@@ -313,14 +324,18 @@ private:
 	UPROPERTY(BlueprintReadOnly, Category = "Player|Health & Shield", meta = (AllowPrivateAccess = "true"))
 	float TimeToRespawnAfterSuicide = BaseTimeToRespawnAfterSuicide;
 
-	FVector OriginalMeshRelativeLocation;
-	FRotator OriginalMeshRelativeRotation;
-
 	FTimerHandle RespawnTimerHandle;
 #pragma endregion
 	
 #pragma region Private Weapon Variables
+	UFUNCTION(Server, Reliable)
+	void SERVER_SetInitialWeapons();
+	
+	UFUNCTION(NetMulticast, Reliable)
+	void MULTICAST_SetInitialWeapons(TSubclassOf<ANotHaloWeaponBase> NewInitialPrimaryWeapon, TSubclassOf<ANotHaloWeaponBase> NewInitialSecondaryWeapon);
 
+	void InitializeWeapons();
+	
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Player|Weapons", meta = (AllowPrivateAccess = "true"))
 	FName FirstPersonWeaponSocketName;
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Player|Weapons", meta = (AllowPrivateAccess = "true"))
@@ -329,17 +344,11 @@ private:
 	FName SecondaryWeaponSocketName;
 	
 	//Player's initial Primary Weapon
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Player|Weapons", meta = (AllowPrivateAccess = "true"))
-	TSubclassOf<ANotHaloWeaponBase> InitialPrimaryWeapon = nullptr;
-	TObjectPtr<ANotHaloWeaponBase> PrimaryWeapon = nullptr; //TODO Handle Initial Weapon via Game Mode
+	TObjectPtr<ANotHaloWeaponBase> PrimaryWeapon = nullptr;
 	//Player's initial Secondary Weapon
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Player|Weapons", meta = (AllowPrivateAccess = "true"))
-	TSubclassOf<ANotHaloWeaponBase> InitialSecondaryWeapon = nullptr; //TODO Handle Initial Weapon via Game Mode
 	TObjectPtr<ANotHaloWeaponBase> SecondaryWeapon = nullptr;
 
-	UPROPERTY()
 	TObjectPtr<ANotHaloDummyWeapon> ThirdPersonPrimaryWeapon = nullptr;
-	UPROPERTY()
 	TObjectPtr<ANotHaloDummyWeapon> ThirdPersonSecondaryWeapon = nullptr;
 
 	int CurrentScopeLevel = 0;
@@ -347,11 +356,14 @@ private:
 #pragma endregion
 	
 #pragma region Private Grenade & Melee Variables
-	TSubclassOf<ANotHaloGrenade> CurrentGrenade = nullptr;
+	UFUNCTION(Server, Reliable)
+	void SERVER_SetupGrenadeTypes();
+	UFUNCTION(NetMulticast, Reliable)
+	void MULTICAST_SetupGrenadeTypes(const TArray<FNotHaloGrenadeData>& GrenadeData);
 
-	//Grenade Types that the Player can use
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Player|Grenades", meta = (AllowPrivateAccess = "true"))
-	TArray<TSubclassOf<ANotHaloGrenade>> GrenadeTypes;
+	void InitializeGrenades();
+	
+	TSubclassOf<ANotHaloGrenade> CurrentGrenade = nullptr;
 	
 	static constexpr int BaseMaxGrenadeCount = 2;
 	static constexpr int BaseInitialGrenadeCount = 2; //TODO Handle this through engine
@@ -363,6 +375,13 @@ private:
 
 	bool CanThrowGrenade = true;
 	bool GrenadeCooldownActive = false;
+
+	//Left Hand socket is used when throwing grenades. If left empty or socket can't be found, grenade will spawn from center of player.
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Player|Mesh", meta = (AllowPrivateAccess = "true"))
+	FName GrenadeSpawnSocketName;
+	
+	UPROPERTY(BlueprintReadOnly, Category = "Player|Mesh", meta = (AllowPrivateAccess = "true"))
+	const USkeletalMeshSocket* GrenadeSpawnSocket = nullptr;
 
 	//Melee
 	static constexpr float BaseMeleeRange = 150.0f;
@@ -384,33 +403,6 @@ private:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Player|Melee", meta = (AllowPrivateAccess = "true"))
 	float AssassinationThreshold = BaseAssassinationThreshold;
 #pragma endregion
-	
-#pragma region Private Teams & Scoring Variables
-	static constexpr int BaseDefaultScore = 0;
-	static constexpr int BaseKills = 0;
-	static constexpr int BaseAssists = 0;
-	static constexpr int BaseDeaths = 0;
 
-	UPROPERTY(BlueprintReadOnly, Category = "Player|Teams & Scoring", meta = (AllowPrivateAccess = "true"))
-	int Kills = BaseKills;
-	UPROPERTY(BlueprintReadOnly, Category = "Player|Teams & Scoring", meta = (AllowPrivateAccess = "true"))
-	int Assists = BaseAssists;
-	UPROPERTY(BlueprintReadOnly, Category = "Player|Teams & Scoring", meta = (AllowPrivateAccess = "true"))
-	int Deaths = BaseDeaths;
-
-	UPROPERTY(EditAnywhere, Category = "Player|Teams & Scoring", meta = (AllowPrivateAccess = "true"))
-	FNotHaloTeamData CurrentTeam;
-
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Player|Teams & Scoring", meta = (AllowPrivateAccess = "true"))
-	int CurrentScore = BaseDefaultScore;
-
-	//Left Hand socket is used when throwing grenades. If left empty or socket can't be found, grenade will spawn from center of player.
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Player|Mesh", meta = (AllowPrivateAccess = "true"))
-	FName GrenadeSpawnSocketName;
-	
-	UPROPERTY(BlueprintReadOnly, Category = "Player|Mesh", meta = (AllowPrivateAccess = "true"))
-	const USkeletalMeshSocket* GrenadeSpawnSocket = nullptr;
-#pragma endregion
-	
 	GENERATED_BODY()
 };

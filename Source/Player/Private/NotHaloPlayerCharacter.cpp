@@ -8,6 +8,7 @@
 #include "NotHaloPlayerLogging.h"
 #include "NotHaloTeamData.h"
 #include "NotHaloWeaponBase.h"
+#include "NotHaloGameModeBase.h"
 #include "Camera/CameraComponent.h"
 #include "Engine/SkeletalMeshSocket.h"
 
@@ -37,66 +38,6 @@ void ANotHaloPlayerCharacter::BeginPlay()
 	FirstPersonArmsWeaponSocket = FirstPersonArms->GetSocketByName(PrimaryWeaponSocketName);
 	ThirdPersonPrimaryWeaponSocket = GetMesh()->GetSocketByName(PrimaryWeaponSocketName);
 	ThirdPersonSecondaryWeaponSocket = GetMesh()->GetSocketByName(SecondaryWeaponSocketName);
-
-	FActorSpawnParameters PlayerWeaponSpawnParams;
-	PlayerWeaponSpawnParams.Owner = this;
-	PlayerWeaponSpawnParams.Instigator = this;
-	PlayerWeaponSpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
-
-	//TODO Grenade shit
-	
-	//GrenadeSpawnSocket = GetMesh()->GetSocketByName(GrenadeSpawnSocketName);
-
-	//if (!GrenadeSpawnSocket)
-	//{
-	//	UE_LOG(NotHaloPlayerLogging, Error, TEXT("Grenade Spawn Socket not found on %s!"), *GetName())
-	//}
-	
-	if (InitialPrimaryWeapon)
-	{
-		PrimaryWeapon = GetWorld()->SpawnActor<ANotHaloWeaponBase>(InitialPrimaryWeapon, FVector::ZeroVector,
-															FRotator::ZeroRotator, PlayerWeaponSpawnParams);
-		PrimaryWeapon->SetWeaponHolderPawn(this);
-
-		ThirdPersonPrimaryWeapon = GetWorld()->SpawnActor<ANotHaloDummyWeapon>(FVector::ZeroVector,
-																FRotator::ZeroRotator, PlayerWeaponSpawnParams);
-		RefreshPrimaryWeaponModel();
-	}
-	else
-	{
-		UE_LOG(NotHaloPlayerLogging, Error, TEXT("No initial Primary Weapon assigned to the player! Is this intentional?"))
-	}
-
-	if (InitialSecondaryWeapon)
-	{
-		SecondaryWeapon = GetWorld()->SpawnActor<ANotHaloWeaponBase>(InitialSecondaryWeapon, FVector::ZeroVector,
-																FRotator::ZeroRotator, PlayerWeaponSpawnParams);
-		SecondaryWeapon->SetWeaponHolderPawn(this);
-		
-		ThirdPersonSecondaryWeapon = GetWorld()->SpawnActor<ANotHaloDummyWeapon>(FVector::ZeroVector,
-																FRotator::ZeroRotator, PlayerWeaponSpawnParams);
-		RefreshSecondaryWeaponModel();
-	}
-	else
-	{
-		UE_LOG(NotHaloPlayerLogging, Error, TEXT("No initial Secondary Weapon assigned to the player! Is this intentional?"))
-	}
-	
-	if (GrenadeTypes.Num() > 0)
-	{
-		for(int i = 0; i < GrenadeTypes.Num(); i++)
-		{
-			GrenadeMap.Add(GrenadeTypes[i], MaxGrenadeCount); //TODO Handle Grenade Count via Game Mode
-		}
-	
-		SetCurrentGrenadeType(GrenadeTypes[0]);
-	}
-	else
-	{
-		UE_LOG(NotHaloPlayerLogging, Error, TEXT("No Grenade Types assigned to the player! Is this intentional?"))
-	}
-
-	OnWeaponsInitialized.Broadcast();
 }
 
 //PossessedBy only runs on the host
@@ -107,7 +48,7 @@ void ANotHaloPlayerCharacter::PossessedBy(AController* NewController)
 	CLIENT_HandlePossess(NewController);
 }
 
-//RPC - Sets up Enhanced Input for the client controlling this player
+//Client RPC - Sets up Enhanced Input for the client controlling this player
 void ANotHaloPlayerCharacter::CLIENT_HandlePossess_Implementation(AController* NewController)
 {
 	IsInFirstPersonCamera = IsLocallyControlled();
@@ -119,6 +60,19 @@ void ANotHaloPlayerCharacter::CLIENT_HandlePossess_Implementation(AController* N
 	if (TObjectPtr<ANotHaloPlayerController> NotHaloController = Cast<ANotHaloPlayerController>(NewController))
 	{
 		NotHaloController->SetupEnhancedInput();
+	}
+}
+
+void ANotHaloPlayerCharacter::OnRep_PlayerState()
+{
+	Super::OnRep_PlayerState();
+	
+	//Need to wait until PlayerState has been replicated on clients before setting up game mode data
+	//Local controller notifies host that PlayerState has replicated and is ready to receive game mode data
+	if (IsLocallyControlled())
+	{
+		SERVER_SetInitialWeapons();
+		SERVER_SetupGrenadeTypes();
 	}
 }
 
@@ -207,9 +161,6 @@ void ANotHaloPlayerCharacter::Kill(ANotHaloPlayerCharacter* Caster)
 
 void ANotHaloPlayerCharacter::Die(bool Suicide)
 {
-	OriginalMeshRelativeLocation = GetMesh()->GetRelativeLocation();
-	OriginalMeshRelativeRotation = GetMesh()->GetRelativeRotation();
-	
 	GetMesh()->SetCollisionProfileName(TEXT("Ragdoll"));
 	GetMesh()->SetSimulatePhysics(true);
 	
@@ -229,7 +180,6 @@ void ANotHaloPlayerCharacter::Respawn()
 	GetMesh()->SetSimulatePhysics(false);
 	GetMesh()->SetCollisionProfileName(TEXT("CharacterMesh"));
 	GetMesh()->AttachToComponent(GetRootComponent(), FAttachmentTransformRules::SnapToTargetNotIncludingScale);
-	GetMesh()->SetRelativeLocationAndRotation(OriginalMeshRelativeLocation, OriginalMeshRelativeRotation);
 	
 	CurrentHealth = MaxHealth;
 	CurrentShield = MaxShield;
@@ -310,6 +260,97 @@ void ANotHaloPlayerCharacter::UpdateShield(int DeltaShield)
 #pragma endregion 
 
 #pragma region Weapons
+//Server RPC - Lets host know that the player is ready to receive initial weapon data
+void ANotHaloPlayerCharacter::SERVER_SetInitialWeapons_Implementation()
+{
+	GameMode = Cast<ANotHaloGameModeBase>(GetWorld()->GetAuthGameMode());
+
+	checkf(GameMode, TEXT("Failed to cast Game Mode to ANotHaloGameModeBase!"));
+		
+	if (!GameMode->InitialPrimaryWeapon)
+	{
+		UE_LOG(NotHaloPlayerLogging, Error, TEXT("Initial Primary Weapon is null! Make sure it's set in the Game Mode."));
+		return;
+	}
+
+	if (!GameMode->InitialSecondaryWeapon)
+	{
+		UE_LOG(NotHaloPlayerLogging, Error, TEXT("Initial Secondary Weapon is null! Make sure it's set in the Game Mode."));
+		return;
+	}
+	
+	MULTICAST_SetInitialWeapons(GameMode->InitialPrimaryWeapon, GameMode->InitialSecondaryWeapon);
+}
+//Multicast RPC - Host sends initial weapon data from the Game Mode to be replicated on all instances
+void ANotHaloPlayerCharacter::MULTICAST_SetInitialWeapons_Implementation(TSubclassOf<ANotHaloWeaponBase> NewInitialPrimaryWeapon, TSubclassOf<ANotHaloWeaponBase> NewInitialSecondaryWeapon)
+{
+	NotHaloPlayerState = Cast<ANotHaloPlayerState>(GetPlayerState());
+
+	checkf(NotHaloPlayerState, TEXT("Failed to cast Player State to ANotHaloPlayerState!"));
+	
+	if (NewInitialPrimaryWeapon)
+	{
+		NotHaloPlayerState->SetInitialPrimaryWeapon(NewInitialPrimaryWeapon);
+	}
+	else
+	{
+		UE_LOG(NotHaloPlayerLogging, Error, TEXT("No initial Primary Weapon assigned to the Game Mode! Is this intentional?"))
+	}
+
+	if (NewInitialSecondaryWeapon)
+	{
+		NotHaloPlayerState->SetInitialSecondaryWeapon(NewInitialSecondaryWeapon);
+	}
+	else
+	{
+		UE_LOG(NotHaloPlayerLogging, Error, TEXT("No initial Secondary Weapon assigned in the Game Mode! Is this intentional?"))
+	}
+
+	InitializeWeapons();
+}
+
+void ANotHaloPlayerCharacter::InitializeWeapons()
+{
+	FActorSpawnParameters PlayerWeaponSpawnParams;
+	PlayerWeaponSpawnParams.Owner = this;
+	PlayerWeaponSpawnParams.Instigator = this;
+	PlayerWeaponSpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+
+	checkf(NotHaloPlayerState, TEXT("NotHaloPlayerState is null!"))
+
+	if (NotHaloPlayerState->GetInitialPrimaryWeapon())
+	{
+		PrimaryWeapon = GetWorld()->SpawnActor<ANotHaloWeaponBase>(NotHaloPlayerState->GetInitialPrimaryWeapon(), FVector::ZeroVector,
+															FRotator::ZeroRotator, PlayerWeaponSpawnParams);
+		PrimaryWeapon->SetWeaponHolderPawn(this);
+
+		ThirdPersonPrimaryWeapon = GetWorld()->SpawnActor<ANotHaloDummyWeapon>(FVector::ZeroVector,
+																FRotator::ZeroRotator, PlayerWeaponSpawnParams);
+		RefreshPrimaryWeaponModel();
+	}
+	else
+	{
+		UE_LOG(NotHaloPlayerLogging, Error, TEXT("No Initial Primary Weapon assigned to the Player State! Is this intentional?"))
+	}
+
+	if (NotHaloPlayerState->GetInitialSecondaryWeapon())
+	{
+		SecondaryWeapon = GetWorld()->SpawnActor<ANotHaloWeaponBase>(NotHaloPlayerState->GetInitialSecondaryWeapon(), FVector::ZeroVector,
+																FRotator::ZeroRotator, PlayerWeaponSpawnParams);
+		SecondaryWeapon->SetWeaponHolderPawn(this);
+		
+		ThirdPersonSecondaryWeapon = GetWorld()->SpawnActor<ANotHaloDummyWeapon>(FVector::ZeroVector,
+																FRotator::ZeroRotator, PlayerWeaponSpawnParams);
+		RefreshSecondaryWeaponModel();
+	}
+	else
+	{
+		UE_LOG(NotHaloPlayerLogging, Error, TEXT("No Initial Secondary Weapon assigned to the Player State! Is this intentional?"))
+	}
+	
+	OnWeaponsInitialized.Broadcast();
+}
+
 //Returns Primary Weapon
 ANotHaloWeaponBase* ANotHaloPlayerCharacter::GetPrimaryWeapon()
 {
@@ -519,6 +560,49 @@ void ANotHaloPlayerCharacter::UnScope()
 #pragma endregion 
 
 #pragma region Grenades
+//Server RPC - Host sends grenade data to client
+void ANotHaloPlayerCharacter::SERVER_SetupGrenadeTypes_Implementation()
+{
+	//TODO Grenade shit
+	
+	//GrenadeSpawnSocket = GetMesh()->GetSocketByName(GrenadeSpawnSocketName);
+
+	//if (!GrenadeSpawnSocket)
+	//{
+	//	UE_LOG(NotHaloPlayerLogging, Error, TEXT("Grenade Spawn Socket not found on %s!"), *GetName())
+	//}
+	
+	if (GameMode->Grenades.Num() > 0)
+	{
+		MULTICAST_SetupGrenadeTypes(GameMode->Grenades);
+	}
+	else
+	{
+		UE_LOG(NotHaloPlayerLogging, Error, TEXT("No Grenade Types assigned to the player! Is this intentional?"))
+	}
+
+	OnGrenadesInitialized.Broadcast();
+}
+
+//Multicast RPC - Sets up grenade data received from Game Mode via host
+void ANotHaloPlayerCharacter::MULTICAST_SetupGrenadeTypes_Implementation(const TArray<FNotHaloGrenadeData>& GrenadeData)
+{
+	NotHaloPlayerState->SetInitialGrenadeData(GrenadeData);
+	
+	InitializeGrenades();
+}
+
+void ANotHaloPlayerCharacter::InitializeGrenades()
+{
+	for(int i = 0; i < NotHaloPlayerState->GetInitialGrenadeData().Num(); i++)
+	{
+		GrenadeMap.Add(NotHaloPlayerState->GetInitialGrenadeData()[i].GrenadeType,
+						NotHaloPlayerState->GetInitialGrenadeData()[i].StartingGrenadeCount);
+	}
+	
+	SetCurrentGrenadeType(NotHaloPlayerState->GetInitialGrenadeData()[0].GrenadeType);
+}
+
 //Throws Grenade
 void ANotHaloPlayerCharacter::ThrowGrenade()
 {
@@ -667,9 +751,9 @@ void ANotHaloPlayerCharacter::SwitchGrenadeType()
 		}
 		
 		//If true, valid Grenade type To switch to has been found and the function can be ended early
-		if (GrenadeMap[GrenadeTypes[NextIndex]] > 0)
+		if (GrenadeMap[GameMode->Grenades[NextIndex].GrenadeType] > 0)
 		{
-			SetCurrentGrenadeType(GrenadeTypes[NextIndex]);
+			SetCurrentGrenadeType(GameMode->Grenades[NextIndex].GrenadeType);
 			return;
 		}
 
@@ -766,41 +850,43 @@ void ANotHaloPlayerCharacter::PerformMelee()
 //Sets Player's current Team
 void ANotHaloPlayerCharacter::SetTeam(FNotHaloTeamData NewTeam)
 {
-	FNotHaloTeamData OldTeam = CurrentTeam;
-	CurrentTeam = NewTeam;
+	FNotHaloTeamData OldTeam = NotHaloPlayerState->GetTeam();
+	NotHaloPlayerState->SetTeam(NewTeam);
 
-	OnTeamChanged.Broadcast(OldTeam, CurrentTeam, &CurrentTeam == &NewTeam);
+	OnTeamChanged.Broadcast(OldTeam, NewTeam);
 }
 
 //Sets Player's current Score
 int ANotHaloPlayerCharacter::GetScore()
 {
-	return CurrentScore;
+	return NotHaloPlayerState->GetScore();
 }
 
 
 //Sets Player's current Score
 void ANotHaloPlayerCharacter::SetScore(int DeltaScore)
 {
-	int OldScore = CurrentScore;
-	CurrentScore += DeltaScore;
+	int OldScore = NotHaloPlayerState->GetScore();
+	int NewScore = OldScore + DeltaScore;
+	
+	NotHaloPlayerState->SetScore(NewScore);
 
-	OnScoreChanged.Broadcast(OldScore, CurrentScore, CurrentScore == OldScore + DeltaScore);
+	OnScoreChanged.Broadcast(OldScore, NewScore, NewScore == OldScore + DeltaScore);
 }
 
 void ANotHaloPlayerCharacter::AddKills(int DeltaKills)
 {
-	Kills += DeltaKills;
+	NotHaloPlayerState->SetKills(NotHaloPlayerState->GetKills() + DeltaKills);
 }
 
 void ANotHaloPlayerCharacter::AddAssists(int DeltaAssists)
 {
-	Assists += DeltaAssists;
+	NotHaloPlayerState->SetAssists(NotHaloPlayerState->GetAssists() + DeltaAssists);
 }
 
 void ANotHaloPlayerCharacter::AddDeaths(int DeltaDeaths)
 {
-	Deaths += DeltaDeaths;
+	NotHaloPlayerState->SetDeaths(NotHaloPlayerState->GetDeaths() + DeltaDeaths);
 }
 #pragma endregion
 
