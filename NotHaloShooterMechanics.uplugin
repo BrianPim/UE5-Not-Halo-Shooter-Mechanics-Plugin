@@ -30,6 +30,11 @@
 			"Type": "Runtime",
 			"LoadingPhase": "Default",
 			"Enabled": true
+		},
+		{
+			"Name": "Interactables",
+			"Type": "Runtime",
+			"LoadingPhase": "Default"
 		}
 	],
 	"Plugins": [

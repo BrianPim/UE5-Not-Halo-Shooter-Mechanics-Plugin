@@ -1,4 +1,4 @@
-﻿// Fill out your copyright notice in the Description page of Project Settings.
+﻿// Copyright (c) 2025 Brian Pimentel
 
 
 #include "NotHaloPlayerCharacter.h"
@@ -891,6 +891,23 @@ void ANotHaloPlayerCharacter::AddDeaths(int DeltaDeaths)
 	NotHaloPlayerState->SetDeaths(NotHaloPlayerState->GetDeaths() + DeltaDeaths);
 }
 #pragma endregion
+
+//Interactables
+void ANotHaloPlayerCharacter::Interact()
+{
+	//NotHaloInteractionManager::HandleInteraction(this, CurrentInteractable);
+	//CurrentInteractable->Interact(this);
+}
+
+AActor* ANotHaloPlayerCharacter::GetCurrentInteractable()
+{
+	return CurrentInteractable;
+}
+
+void ANotHaloPlayerCharacter::SetCurrentInteractable(AActor* NewInteractable)
+{
+	CurrentInteractable = NewInteractable;
+}
 
 //Mesh
 void ANotHaloPlayerCharacter::RefreshPlayerModel()

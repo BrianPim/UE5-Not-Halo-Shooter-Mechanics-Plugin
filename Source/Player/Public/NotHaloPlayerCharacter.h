@@ -1,4 +1,4 @@
-﻿// Fill out your copyright notice in the Description page of Project Settings.
+﻿// Copyright (c) 2025 Brian Pimentel
 
 #pragma once
 
@@ -8,7 +8,6 @@
 #include "GameFramework/Character.h"
 #include "NotHaloPlayerCharacter.generated.h"
 
-struct FNotHaloGrenadeData;
 //Forward Declarations
 class UInputComponent;
 class ANotHaloWeaponBase;
@@ -16,6 +15,7 @@ class ANotHaloDummyWeapon;
 class ANotHaloGrenade;
 class ANotHaloGameModeBase;
 class UCameraComponent;
+struct FNotHaloGrenadeData;
 
 #pragma region Delegate Declarations
 //Delegate for integer stats are changed
@@ -227,6 +227,15 @@ public:
 	void AddDeaths(int DeltaDeaths);
 #pragma endregion
 
+	UFUNCTION(BlueprintCallable, Category = "Player|Interactions")
+	void Interact();
+
+	UFUNCTION(BlueprintPure, Category = "Player|Interactions")
+	AActor* GetCurrentInteractable();
+	
+	UFUNCTION(BlueprintCallable, Category = "Player|Interactions")
+	void SetCurrentInteractable(AActor* NewInteractable);
+	
 	UFUNCTION(BlueprintCallable, Category = "Player|Mesh")
 	void RefreshPlayerModel();
 
@@ -404,5 +413,8 @@ private:
 	float AssassinationThreshold = BaseAssassinationThreshold;
 #pragma endregion
 
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Player|Interactions", meta = (AllowPrivateAccess = "true"))
+	TObjectPtr<AActor> CurrentInteractable;
+	
 	GENERATED_BODY()
 };
