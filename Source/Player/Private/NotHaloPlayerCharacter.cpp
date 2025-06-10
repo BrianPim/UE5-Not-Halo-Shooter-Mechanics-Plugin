@@ -18,6 +18,8 @@ ANotHaloPlayerCharacter::ANotHaloPlayerCharacter()
 {
 	// Set this character to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = true;
+
+	bReplicates = true;
 	
 	FirstPersonCamera = CreateDefaultSubobject<UCameraComponent>(TEXT("Player Camera"));
 	FirstPersonCamera->AttachToComponent(RootComponent, FAttachmentTransformRules::KeepRelativeTransform);
@@ -33,19 +35,38 @@ ANotHaloPlayerCharacter::ANotHaloPlayerCharacter()
 void ANotHaloPlayerCharacter::BeginPlay()
 {
 	Super::BeginPlay();
+
+	SetReplicateMovement(true);
 	
 	BaseFOV = FirstPersonCamera->FieldOfView;
 
 	FirstPersonArmsWeaponSocket = FirstPersonArms->GetSocketByName(PrimaryWeaponSocketName);
 	ThirdPersonPrimaryWeaponSocket = GetMesh()->GetSocketByName(PrimaryWeaponSocketName);
 	ThirdPersonSecondaryWeaponSocket = GetMesh()->GetSocketByName(SecondaryWeaponSocketName);
+	
+	GetWorld()->GetTimerManager().SetTimer(WaitForPlayerStateTimerHandle, this, &ANotHaloPlayerCharacter::CheckForValidPlayerState, 0.1f, true);
+}
+
+void ANotHaloPlayerCharacter::CheckForValidPlayerState()
+{
+	if (GetPlayerState())
+	{
+		GetWorld()->GetTimerManager().ClearTimer(WaitForPlayerStateTimerHandle);
+
+		//If the player is controlled standalone or by the listen server
+		if (!InitialSetupComplete && IsLocallyControlled() && (IsNetMode(NM_Standalone) || IsNetMode(NM_ListenServer)))
+		{
+			SetInitialWeapons();
+			SetupGrenadeTypes();
+		}
+	}
 }
 
 //PossessedBy only runs on the host
 void ANotHaloPlayerCharacter::PossessedBy(AController* NewController)
 {
 	Super::PossessedBy(NewController);
-
+	
 	CLIENT_HandlePossess(NewController);
 }
 
@@ -70,7 +91,9 @@ void ANotHaloPlayerCharacter::OnRep_PlayerState()
 	
 	//Need to wait until PlayerState has been replicated on clients before setting up game mode data
 	//Local controller notifies host that PlayerState has replicated and is ready to receive game mode data
-	if (IsLocallyControlled())
+
+	//If running on a client connected to a server, need to do some extra RPC stuff to set up correctly.
+	if (!InitialSetupComplete && IsLocallyControlled() && IsNetMode(NM_Client))
 	{
 		SERVER_SetInitialWeapons();
 		SERVER_SetupGrenadeTypes();
@@ -291,6 +314,13 @@ void ANotHaloPlayerCharacter::UpdateShield(int DeltaShield)
 //Server RPC - Lets host know that the player is ready to receive initial weapon data
 void ANotHaloPlayerCharacter::SERVER_SetInitialWeapons_Implementation()
 {
+	SetInitialWeapons();
+}
+
+void ANotHaloPlayerCharacter::SetInitialWeapons()
+{
+	if (InitialSetupComplete) return;
+	
 	GameMode = Cast<ANotHaloGameModeBase>(GetWorld()->GetAuthGameMode());
 
 	checkf(GameMode, TEXT("Failed to cast Game Mode to ANotHaloGameModeBase!"));
@@ -307,10 +337,11 @@ void ANotHaloPlayerCharacter::SERVER_SetInitialWeapons_Implementation()
 		return;
 	}
 	
-	MULTICAST_SetInitialWeapons(GameMode->InitialPrimaryWeapon, GameMode->InitialSecondaryWeapon);
+	MULTICAST_SendInitialWeaponsData(GameMode->InitialPrimaryWeapon, GameMode->InitialSecondaryWeapon);
 }
+
 //Multicast RPC - Host sends initial weapon data from the Game Mode to be replicated on all instances
-void ANotHaloPlayerCharacter::MULTICAST_SetInitialWeapons_Implementation(TSubclassOf<ANotHaloWeaponBase> NewInitialPrimaryWeapon, TSubclassOf<ANotHaloWeaponBase> NewInitialSecondaryWeapon)
+void ANotHaloPlayerCharacter::MULTICAST_SendInitialWeaponsData_Implementation(TSubclassOf<ANotHaloWeaponBase> NewInitialPrimaryWeapon, TSubclassOf<ANotHaloWeaponBase> NewInitialSecondaryWeapon)
 {
 	checkf(GetPlayerState(), TEXT("Failed to find Player State!"));
 	
@@ -336,6 +367,7 @@ void ANotHaloPlayerCharacter::MULTICAST_SetInitialWeapons_Implementation(TSubcla
 		UE_LOG(NotHaloPlayerLogging, Error, TEXT("No initial Secondary Weapon assigned in the Game Mode! Is this intentional?"))
 	}
 
+	InitialSetupComplete = true;
 	InitializeWeapons();
 }
 
@@ -593,6 +625,11 @@ void ANotHaloPlayerCharacter::UnScope()
 //Server RPC - Host sends grenade data to client
 void ANotHaloPlayerCharacter::SERVER_SetupGrenadeTypes_Implementation()
 {
+	SetupGrenadeTypes();
+}
+
+void ANotHaloPlayerCharacter::SetupGrenadeTypes()
+{
 	//TODO Grenade shit
 	
 	//GrenadeSpawnSocket = GetMesh()->GetSocketByName(GrenadeSpawnSocketName);
@@ -604,23 +641,22 @@ void ANotHaloPlayerCharacter::SERVER_SetupGrenadeTypes_Implementation()
 	
 	if (GameMode->Grenades.Num() > 0)
 	{
-		MULTICAST_SetupGrenadeTypes(GameMode->Grenades);
+		MULTICAST_SendGrenadeTypesData(GameMode->Grenades);
 	}
 	else
 	{
 		UE_LOG(NotHaloPlayerLogging, Error, TEXT("No Grenade Types assigned to the player! Is this intentional?"))
 	}
-
-	OnGrenadesInitialized.Broadcast();
 }
 
 //Multicast RPC - Sets up grenade data received from Game Mode via host
-void ANotHaloPlayerCharacter::MULTICAST_SetupGrenadeTypes_Implementation(const TArray<FNotHaloGrenadeData>& GrenadeData)
+void ANotHaloPlayerCharacter::MULTICAST_SendGrenadeTypesData_Implementation(const TArray<FNotHaloGrenadeData>& GrenadeData)
 {
 	NotHaloPlayerState->SetInitialGrenadeData(GrenadeData);
 	
 	InitializeGrenades();
 }
+
 
 void ANotHaloPlayerCharacter::InitializeGrenades()
 {
@@ -631,6 +667,7 @@ void ANotHaloPlayerCharacter::InitializeGrenades()
 	}
 	
 	SetCurrentGrenadeType(NotHaloPlayerState->GetInitialGrenadeData()[0].GrenadeType);
+	OnGrenadesInitialized.Broadcast();
 }
 
 //Throws Grenade

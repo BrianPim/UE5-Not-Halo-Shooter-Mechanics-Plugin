@@ -290,10 +290,15 @@ protected:
 	void LineTraceForInteractable();
 
 private:
+	bool InitialSetupComplete = false;
+	
 	UPROPERTY()
 	TObjectPtr<ANotHaloGameModeBase> GameMode;
 	UPROPERTY()
 	TObjectPtr<ANotHaloPlayerState> NotHaloPlayerState;
+
+	UFUNCTION()
+	void CheckForValidPlayerState();
 	
 	UFUNCTION(Client, Reliable)
 	void CLIENT_HandlePossess(AController* NewController);
@@ -336,15 +341,19 @@ private:
 	UPROPERTY(BlueprintReadOnly, Category = "Player|Health & Shield", meta = (AllowPrivateAccess = "true"))
 	float TimeToRespawnAfterSuicide = BaseTimeToRespawnAfterSuicide;
 
+	FTimerHandle WaitForPlayerStateTimerHandle;
 	FTimerHandle RespawnTimerHandle;
 #pragma endregion
 	
 #pragma region Private Weapon Variables
 	UFUNCTION(Server, Reliable)
 	void SERVER_SetInitialWeapons();
+
+	UFUNCTION()
+	void SetInitialWeapons();
 	
 	UFUNCTION(NetMulticast, Reliable)
-	void MULTICAST_SetInitialWeapons(TSubclassOf<ANotHaloWeaponBase> NewInitialPrimaryWeapon, TSubclassOf<ANotHaloWeaponBase> NewInitialSecondaryWeapon);
+	void MULTICAST_SendInitialWeaponsData(TSubclassOf<ANotHaloWeaponBase> NewInitialPrimaryWeapon, TSubclassOf<ANotHaloWeaponBase> NewInitialSecondaryWeapon);
 
 	void InitializeWeapons();
 	
@@ -370,8 +379,12 @@ private:
 #pragma region Private Grenade & Melee Variables
 	UFUNCTION(Server, Reliable)
 	void SERVER_SetupGrenadeTypes();
+
+	UFUNCTION()
+	void SetupGrenadeTypes();
+	
 	UFUNCTION(NetMulticast, Reliable)
-	void MULTICAST_SetupGrenadeTypes(const TArray<FNotHaloGrenadeData>& GrenadeData);
+	void MULTICAST_SendGrenadeTypesData(const TArray<FNotHaloGrenadeData>& GrenadeData);
 
 	void InitializeGrenades();
 	
