@@ -15,6 +15,7 @@ class ANotHaloDummyWeapon;
 class ANotHaloGrenade;
 class ANotHaloGameModeBase;
 class UCameraComponent;
+class INotHaloInterface_InteractableBase;
 struct FNotHaloGrenadeData;
 
 #pragma region Delegate Declarations
@@ -228,10 +229,10 @@ public:
 #pragma endregion
 
 	UFUNCTION(BlueprintCallable, Category = "Player|Interactions")
-	void Interact();
+	void TryInteract();
 
 	UFUNCTION(BlueprintPure, Category = "Player|Interactions")
-	AActor* GetCurrentInteractable();
+	UObject* GetCurrentInteractable();
 	
 	UFUNCTION(BlueprintCallable, Category = "Player|Interactions")
 	void SetCurrentInteractable(AActor* NewInteractable);
@@ -285,6 +286,8 @@ protected:
 	virtual void BeginPlay() override;
 	virtual void PossessedBy(AController* NewController) override;
 	virtual void OnRep_PlayerState() override;
+	
+	void LineTraceForInteractable();
 
 private:
 	UPROPERTY()
@@ -414,7 +417,7 @@ private:
 #pragma endregion
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Player|Interactions", meta = (AllowPrivateAccess = "true"))
-	TObjectPtr<AActor> CurrentInteractable;
+	TScriptInterface<INotHaloInterface_InteractableBase> CurrentInteractable;
 	
 	GENERATED_BODY()
 };

@@ -9,7 +9,8 @@ public class Interactables : ModuleRules
         PublicDependencyModuleNames.AddRange(
             new string[]
             {
-                "Core",
+                "Core", 
+                "Interfaces",
             }
         );
 

@@ -29,8 +29,16 @@ void ANotHaloInteractableBase::Tick(float DeltaTime)
 	Super::Tick(DeltaTime);
 }
 
-void ANotHaloInteractableBase::Interact(ANotHaloPlayerCharacter* PlayerCharacter)
+void ANotHaloInteractableBase::Interact_Implementation(AActor* PlayerActor)
 {
+	TObjectPtr<ANotHaloPlayerCharacter> PlayerCharacter = Cast<ANotHaloPlayerCharacter>(PlayerActor);
+
+	if (!PlayerCharacter)
+	{
+		UE_LOG(LogTemp, Error, TEXT("Failed to cast to ANotHaloPlayerCharacter!"));
+		return;
+	}
+	
 	if (!InteractionEnabled)
 	{
 		UE_LOG(LogTemp, Warning, TEXT("Player ID %i tried to interact but InteractionEnable is false!"),
@@ -41,6 +49,7 @@ void ANotHaloInteractableBase::Interact(ANotHaloPlayerCharacter* PlayerCharacter
 
 	NETMULTICAST_HandleInteraction(PlayerCharacter);
 }
+
 
 void ANotHaloInteractableBase::NETMULTICAST_HandleInteraction_Implementation(ANotHaloPlayerCharacter* PlayerCharacter)
 {

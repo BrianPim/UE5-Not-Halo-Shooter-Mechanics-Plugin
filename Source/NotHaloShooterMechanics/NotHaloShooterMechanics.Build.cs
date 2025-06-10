@@ -25,7 +25,8 @@ public class NotHaloShooterMechanics : ModuleRules
 		PublicDependencyModuleNames.AddRange(
 			new string[]
 			{
-				"Core",
+				"Core", 
+				"Weapons",
 				// ... add other public dependencies that you statically link with here ...
 			}
 			);

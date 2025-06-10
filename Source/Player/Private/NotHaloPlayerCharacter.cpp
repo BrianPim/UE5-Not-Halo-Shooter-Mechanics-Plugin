@@ -9,6 +9,7 @@
 #include "NotHaloTeamData.h"
 #include "NotHaloWeaponBase.h"
 #include "NotHaloGameModeBase.h"
+#include "NotHaloInterface_InteractableBase.h"
 #include "Camera/CameraComponent.h"
 #include "Engine/SkeletalMeshSocket.h"
 
@@ -80,6 +81,33 @@ void ANotHaloPlayerCharacter::OnRep_PlayerState()
 void ANotHaloPlayerCharacter::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
+	LineTraceForInteractable();
+}
+
+void ANotHaloPlayerCharacter::LineTraceForInteractable()
+{
+	FVector Start, End;
+	FHitResult Hit;
+
+	// Example trace logic
+	APlayerController* PC = Cast<APlayerController>(GetController());
+	if (!PC) return;
+
+	PC->DeprojectMousePositionToWorld(Start, End);
+	End = Start + End * 1000.0f;
+
+	if (GetWorld()->LineTraceSingleByChannel(Hit, Start, End, ECC_Visibility))
+	{
+		if (Hit.GetActor() && Hit.GetActor()->GetClass()->ImplementsInterface(UNotHaloInterface_InteractableBase::StaticClass()))
+		{
+			CurrentInteractable.SetObject(Hit.GetActor());
+			CurrentInteractable.SetInterface(Cast<INotHaloInterface_InteractableBase>(Hit.GetActor()));
+		}
+		else
+		{
+			CurrentInteractable = nullptr;
+		}
+	}
 }
 
 #pragma region Input & Movement
@@ -893,15 +921,14 @@ void ANotHaloPlayerCharacter::AddDeaths(int DeltaDeaths)
 #pragma endregion
 
 //Interactables
-void ANotHaloPlayerCharacter::Interact()
+void ANotHaloPlayerCharacter::TryInteract()
 {
-	//NotHaloInteractionManager::HandleInteraction(this, CurrentInteractable);
-	//CurrentInteractable->Interact(this);
+	CurrentInteractable->Interact_Implementation(this);
 }
 
-AActor* ANotHaloPlayerCharacter::GetCurrentInteractable()
+UObject* ANotHaloPlayerCharacter::GetCurrentInteractable()
 {
-	return CurrentInteractable;
+	return CurrentInteractable.GetObject();
 }
 
 void ANotHaloPlayerCharacter::SetCurrentInteractable(AActor* NewInteractable)

@@ -100,7 +100,7 @@ private:
 
 	//Used to store reference to Hud
 	//UPROPERTY()
-	//TObjectPtr<AHudBB> PlayerHud = nullptr;
+	//TObjectPtr<AHud> PlayerHud = nullptr;
 	
 	GENERATED_BODY()
 };

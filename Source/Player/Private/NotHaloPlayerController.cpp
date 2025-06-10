@@ -228,6 +228,6 @@ void ANotHaloPlayerController::HandleInteract()
 {
 	if (PlayerCharacter)
 	{
-		PlayerCharacter->Interact();
+		PlayerCharacter->TryInteract();
 	}
 }

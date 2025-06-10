@@ -34,7 +34,14 @@
 		{
 			"Name": "Interactables",
 			"Type": "Runtime",
-			"LoadingPhase": "Default"
+			"LoadingPhase": "Default",
+			"Enabled": true
+		},
+		{
+			"Name": "Interfaces",
+			"Type": "Runtime",
+			"LoadingPhase": "Default",
+			"Enabled": true
 		}
 	],
 	"Plugins": [

@@ -1,8 +1,8 @@
 ﻿using UnrealBuildTool;
 
-public class Player : ModuleRules
+public class Interfaces : ModuleRules
 {
-    public Player(ReadOnlyTargetRules Target) : base(Target)
+    public Interfaces(ReadOnlyTargetRules Target) : base(Target)
     {
         PCHUsage = ModuleRules.PCHUsageMode.UseExplicitOrSharedPCHs;
 
@@ -10,10 +10,6 @@ public class Player : ModuleRules
             new string[]
             {
                 "Core", 
-                "Engine",
-                "Weapons", 
-                "Interfaces",
-                "NotHaloShooterMechanics", 
             }
         );
 
@@ -23,11 +19,7 @@ public class Player : ModuleRules
                 "CoreUObject",
                 "Engine",
                 "Slate",
-                "SlateCore", 
-                "EnhancedInput", 
-                "Weapons", 
-                "Interfaces",
-                "NotHaloShooterMechanics", 
+                "SlateCore",
             }
         );
     }

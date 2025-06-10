@@ -3,6 +3,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "NotHaloInterface_InteractableBase.h"
 #include "GameFramework/Actor.h"
 #include "NotHaloInteractableBase.generated.h"
 
@@ -17,15 +18,17 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FInteraction,
 											ANotHaloPlayerCharacter*, PlayerCharacter);
 
 UCLASS(Abstract)
-class INTERACTABLES_API ANotHaloInteractableBase : public AActor
+class INTERACTABLES_API ANotHaloInteractableBase : public AActor, public INotHaloInterface_InteractableBase
 {
+	GENERATED_BODY()
+
 public:
 	// Sets default values for this actor's properties
 	ANotHaloInteractableBase();
 	virtual void Tick(float DeltaTime) override;
 
 	UFUNCTION(BlueprintCallable)
-	void Interact(ANotHaloPlayerCharacter* PlayerCharacter);
+	virtual void Interact_Implementation(AActor* PlayerActor) override;
 
 	UFUNCTION(BlueprintPure)
 	bool GetInteractionEnabled();
@@ -45,8 +48,6 @@ protected:
 	virtual void BeginPlay() override;
 
 private:
-	GENERATED_BODY()
-
 	UFUNCTION(NetMulticast, Reliable)
 	void NETMULTICAST_HandleInteraction(ANotHaloPlayerCharacter* PlayerCharacter);
 
